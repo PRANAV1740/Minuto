@@ -55,14 +55,19 @@ const norm = (text: string): string => text.toLowerCase().replace(/\s+/gu, ' ').
 // ---------------------------------------------------------------- caption root
 
 export function findCaptionRoot(doc: Document): { element: Element; strategy: string } | null {
-  // The captions button also carries "captions" in its label, so controls are
-  // excluded — otherwise the toggle could be mistaken for the transcript.
-  const labelled = [...doc.querySelectorAll('[aria-label]')].find((element) => {
+  // Measured in a real call: four elements carry "caption" in their label —
+  // the transcript region, the CC toggle, a jump-to-latest control and a
+  // settings entry. Controls are excluded, and the one marked as a region
+  // wins, rather than trusting document order to put the right one first.
+  const labelled = [...doc.querySelectorAll('[aria-label]')].filter((element) => {
     const tag = element.tagName.toLowerCase();
     if (tag === 'button' || tag === 'a' || element.getAttribute('role') === 'button') return false;
     return /caption|subtitle/i.test(element.getAttribute('aria-label') ?? '');
   });
-  if (labelled) return { element: labelled, strategy: 'aria-label' };
+
+  const region = labelled.find((element) => element.getAttribute('role') === 'region');
+  const byLabel = region ?? labelled[0];
+  if (byLabel) return { element: byLabel, strategy: 'aria-label' };
 
   // Captions are announced to screen readers, so the transcript sits in a live
   // region even when the labelling changes.
@@ -137,23 +142,53 @@ export function findRoster(doc: Document): { names: string[]; strategy: string }
 
 // ------------------------------------------------------------------ captions
 
+/**
+ * Whether a subtree is interface rather than speech.
+ *
+ * Measured in a real call: Meet puts a "Jump to most recent captions" button
+ * inside the caption region, and its Material icon is a *text* ligature
+ * ("arrow_downward") sitting in a span. Read naively, that button becomes a
+ * caption attributed to a speaker called arrow_downward. Anything hidden from
+ * screen readers is likewise decoration, never speech.
+ */
+function isInterface(element: Element): boolean {
+  if (element.getAttribute('aria-hidden') === 'true') return true;
+
+  const tag = element.tagName.toLowerCase();
+  return tag === 'button' || tag === 'a' || element.getAttribute('role') === 'button';
+}
+
 /** Visible text pieces inside an entry, in document order. */
 function textPieces(element: Element): string[] {
   const pieces: string[] = [];
 
-  for (const node of element.querySelectorAll('*')) {
-    const alt = node.getAttribute('alt');
-    if (alt && alt.trim() !== '') pieces.push(alt.trim());
+  const walk = (node: Element): void => {
+    for (const child of node.children) {
+      // Skipped whole, not just at this level: the text is nested inside.
+      if (isInterface(child)) continue;
 
-    // Leaves only: an ancestor's textContent would repeat its children.
-    if (node.children.length === 0) {
-      const text = node.textContent?.trim() ?? '';
-      if (text !== '') pieces.push(text);
+      const alt = child.getAttribute('alt');
+      if (alt && alt.trim() !== '') pieces.push(alt.trim());
+
+      if (child.children.length === 0) {
+        const text = child.textContent?.trim() ?? '';
+        if (text !== '') pieces.push(text);
+      } else {
+        walk(child);
+      }
     }
-  }
+  };
+
+  walk(element);
 
   if (pieces.length === 0) {
-    const own = element.textContent?.trim() ?? '';
+    // Only this element's own text, never its descendants': falling back to
+    // textContent here would scoop up the control text just skipped.
+    const own = [...element.childNodes]
+      .filter((node) => node.nodeType === 3)
+      .map((node) => node.nodeValue ?? '')
+      .join('')
+      .trim();
     if (own !== '') pieces.push(own);
   }
 

@@ -212,6 +212,82 @@ test('reading captions with no caption root yields nothing', () => {
   assert.deepEqual(readCaptions(dom('<div></div>'), ROSTER), []);
 });
 
+/**
+ * Captured from a real Google Meet call on 27 Nov 2026, with captions on.
+ * Structure is exactly as the diagnostic reported it; text is stand-in.
+ *
+ * The third child is Meet's own "Jump to most recent captions" control, whose
+ * Material icon ligature is plain text inside the button — so a naive read
+ * turns the button into a caption.
+ */
+const REAL_MEET_CAPTIONS = `
+  <div role="region" aria-label="Captions">
+    <div>
+      <div>
+        <img>
+        <div><span>Pranav K</span></div>
+      </div>
+      <div>so we will ship the Geodesis demo on Friday</div>
+    </div>
+    <div><div></div></div>
+    <div>
+      <div data-is-touch-wrapper="true">
+        <button aria-label="Jump to most recent captions" jsname="Xke7ne">
+          <span></span><span></span><span jsname="m9ZlFb"></span><span></span>
+          <span jsname="Xr1QTb"><i aria-hidden="true">arrow_downward</i></span>
+          <span aria-hidden="true" jsname="V67aGc">arrow_downward</span>
+          <span jsname="UkTUqb"></span>
+        </button>
+      </div>
+    </div>
+  </div>`;
+
+test('the real Meet caption region is found by its label', () => {
+  const found = findCaptionRoot(dom(REAL_MEET_CAPTIONS));
+  assert.equal(found?.strategy, 'aria-label');
+  assert.equal(found?.element.getAttribute('role'), 'region');
+});
+
+test('the real Meet markup yields exactly the one caption in it', () => {
+  const entries = readCaptions(dom(REAL_MEET_CAPTIONS), ROSTER);
+  assert.deepEqual(entries, [
+    { speaker: 'Pranav K', text: 'so we will ship the Geodesis demo on Friday' },
+  ]);
+});
+
+test('the jump-to-latest control is not read as a caption', () => {
+  const entries = readCaptions(dom(REAL_MEET_CAPTIONS), ROSTER);
+  assert.equal(
+    entries.some((entry) => /arrow_downward|jump/i.test(entry.speaker + entry.text)),
+    false,
+    'a Meet control leaked into the captions',
+  );
+});
+
+test('an icon ligature hidden from screen readers is not read as text', () => {
+  const doc = dom(`
+    <div id="e">
+      <div>Pranav K</div>
+      <span aria-hidden="true">arrow_downward</span>
+      <div>the actual caption</div>
+    </div>`);
+  assert.equal(parseCaptionEntry(first(doc, '#e'), ROSTER)?.text, 'the actual caption');
+});
+
+test('an entry that is only a control does not parse', () => {
+  const doc = dom('<div id="e"><button aria-label="Mute">mic_off</button></div>');
+  assert.equal(parseCaptionEntry(first(doc, '#e'), ROSTER), null);
+});
+
+test('the caption region wins over the captions button sharing its label', () => {
+  // Measured: four elements match [aria-label*="aption"] in a live call.
+  const doc = dom(`
+    <button aria-label="Turn off captions"></button>
+    <div id="region" role="region" aria-label="Captions"></div>
+    <div aria-label="Caption settings"></div>`);
+  assert.equal(findCaptionRoot(doc)?.element.id, 'region');
+});
+
 // ---------- findActiveSpeaker ----------
 
 test('a tile marked as speaking gives the active speaker', () => {

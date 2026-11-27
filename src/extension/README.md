@@ -125,18 +125,33 @@ From [manifest.json](./manifest.json) — kept to the minimum, because every ext
 
 ## What a real call has told us so far
 
-First capture, 27 Nov 2026, one participant, captions state unconfirmed:
+Two captures from a live Meet, 27 Nov 2026. Both are now test fixtures, so
+these are regressions rather than notes.
+
+**Captions off, one participant:**
 
 | Selector | Matched | Reading |
 |---|---|---|
-| `[data-participant-id]` | 1 | The roster hook is real. The tile carries **no** `aria-label`, so the name is coming from its text content, which is fragile |
-| `[role="list"][aria-label]` | 0 | Meet does not use a list role for participants. The strategy stays as a fallback but is not the live path |
-| `[data-is-speaking]` | 0 | The attribute does not exist. Active-speaker detection rests on the label-based fallback, still unverified |
-| `[aria-live]` | 2 | One is the Material Design announcer — **fixed**, it was being chosen and read nothing |
-| `[aria-label*="aption"]` | 1 | Almost certainly the CC button, correctly excluded from the caption root search |
-| `[jsname]` | 205 | Present throughout; `jsname="E2KThb"` is the participant tile |
+| `[data-participant-id]` | 1 | The roster hook is real. The tile carries **no** `aria-label`, so the name comes from its text content — fragile, and still the weakest link |
+| `[role="list"][aria-label]` | 0 | Meet uses no list role for participants. Kept only as a fallback |
+| `[data-is-speaking]` | 0 | The attribute does not exist. Active-speaker rests on the label-based fallback |
+| `[aria-live]` | 2 | One is Material Design's announcer, empty and a perfect match for the caption selector — it was being chosen and read nothing. **Fixed** |
 
-Still needed: a capture taken **with captions switched on and somebody talking**, which is the only thing that shows how a caption entry is actually built.
+**Captions on:**
+
+| Finding | |
+|---|---|
+| Caption region | `<div role="region" aria-label="Captions">` — found by the `aria-label` strategy ✓ |
+| `[aria-label*="aption"]` | rises to 4: the region, the CC toggle, a jump-to-latest control, a settings entry. The region now wins explicitly rather than by document order |
+| Entry shape | `div > ( div > img + div > span[speaker] ) + div[text]` — speaker in a nested span, caption as a sibling div |
+| Captions parsed | 1 real caption read correctly ✓ |
+| **Meet's own button lives inside the region** | "Jump to most recent captions", whose Material icon is the *text* ligature `arrow_downward`. It was being read as a caption by a speaker named arrow_downward. **Fixed**: controls and anything `aria-hidden` are skipped |
+
+Still unverified, because both captures had only one participant:
+
+- Speaker attribution with two or more people in the call
+- The active-speaker signal — no candidate attribute has been found yet
+- Caption collapsing against Meet's real rewrite behaviour
 
 ## Status
 
