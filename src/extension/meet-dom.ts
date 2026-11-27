@@ -66,10 +66,22 @@ export function findCaptionRoot(doc: Document): { element: Element; strategy: st
 
   // Captions are announced to screen readers, so the transcript sits in a live
   // region even when the labelling changes.
-  const live = doc.querySelector('[aria-live="polite"], [aria-live="assertive"]');
-  if (live) return { element: live, strategy: 'aria-live' };
+  //
+  // Measured in a real call: Meet also carries a Material Design screen-reader
+  // announcer, which is an empty aria-live region that matches this just as
+  // well. Picking it looks like success and then reads nothing for the whole
+  // meeting — a worse failure than finding no container at all, because the
+  // diagnostic reports a strategy that "worked".
+  const live = [...doc.querySelectorAll('[aria-live="polite"], [aria-live="assertive"]')].filter(
+    (element) => !element.hasAttribute('data-mdc-dom-announce'),
+  );
 
-  return null;
+  // A region with something in it beats an empty one, but an empty one is
+  // still right when captions are on and nobody has spoken yet.
+  const withContent = live.find((element) => element.children.length > 0);
+  const chosen = withContent ?? live[0];
+
+  return chosen ? { element: chosen, strategy: 'aria-live' } : null;
 }
 
 export function findCaptionToggle(doc: Document): Element | null {

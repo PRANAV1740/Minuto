@@ -123,6 +123,21 @@ From [manifest.json](./manifest.json) — kept to the minimum, because every ext
 | `sidePanel` | This panel |
 | `storage` | Session state across worker restarts |
 
+## What a real call has told us so far
+
+First capture, 27 Nov 2026, one participant, captions state unconfirmed:
+
+| Selector | Matched | Reading |
+|---|---|---|
+| `[data-participant-id]` | 1 | The roster hook is real. The tile carries **no** `aria-label`, so the name is coming from its text content, which is fragile |
+| `[role="list"][aria-label]` | 0 | Meet does not use a list role for participants. The strategy stays as a fallback but is not the live path |
+| `[data-is-speaking]` | 0 | The attribute does not exist. Active-speaker detection rests on the label-based fallback, still unverified |
+| `[aria-live]` | 2 | One is the Material Design announcer — **fixed**, it was being chosen and read nothing |
+| `[aria-label*="aption"]` | 1 | Almost certainly the CC button, correctly excluded from the caption root search |
+| `[jsname]` | 205 | Present throughout; `jsname="E2KThb"` is the participant tile |
+
+Still needed: a capture taken **with captions switched on and somebody talking**, which is the only thing that shows how a caption entry is actually built.
+
 ## Status
 
 Built, typechecked, 342 tests passing. The pure logic — caption collapsing, speaker attribution, window stitching, streaming windows, GPU tier selection — is tested. The panel markup renders.

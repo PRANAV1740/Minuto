@@ -62,6 +62,35 @@ test('no caption container is reported as missing', () => {
   assert.equal(findCaptionRoot(dom('<div></div>')), null);
 });
 
+// Measured in a real call: Meet carries a Material Design screen-reader
+// announcer that is an empty aria-live region. Matching it looks like success
+// and then reads nothing, which is worse than finding nothing at all.
+test('the material design announcer is not mistaken for the caption area', () => {
+  const doc = dom('<div id="a" aria-live="polite" aria-atomic="true" data-mdc-dom-announce="true"></div>');
+  assert.equal(findCaptionRoot(doc), null);
+});
+
+test('a real live region is still found alongside the announcer', () => {
+  const doc = dom(`
+    <div id="announcer" aria-live="polite" data-mdc-dom-announce="true"></div>
+    <div id="real" aria-live="polite"><div><div>Pranav K</div><div>hello there</div></div></div>`);
+  assert.equal(findCaptionRoot(doc)?.element.id, 'real');
+});
+
+test('a live region with content is preferred over an empty one', () => {
+  const doc = dom(`
+    <div id="empty" aria-live="polite"></div>
+    <div id="full" aria-live="polite"><div>something</div></div>`);
+  assert.equal(findCaptionRoot(doc)?.element.id, 'full');
+});
+
+test('an empty live region is still better than nothing', () => {
+  // Captions switched on but nobody talking yet: the container is there and
+  // empty, and attaching to it is correct.
+  const doc = dom('<div id="c" aria-live="polite"></div>');
+  assert.equal(findCaptionRoot(doc)?.element.id, 'c');
+});
+
 // ---------- findRoster ----------
 
 test('names are read from a participants list', () => {
