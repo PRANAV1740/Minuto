@@ -78,15 +78,36 @@
       button:hover:not(:disabled) { border-color: var(--dim); }
       button:disabled { opacity: 0.5; cursor: default; }
       #copied { margin-left: 8px; font-size: 11px; }
+      .check { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; cursor: pointer; }
+      .check:last-of-type { margin-bottom: 0; }
+      .check input { margin: 0; }
     </style>
   </head>
   <body>
     <h1>Minuto</h1>
-    <div class="sub">Phase 1 · reading only · nothing is recorded or sent</div>
+    <div class="sub">Phase 1 · nothing is recorded or sent · nobody else in the call sees any change</div>
 
     <section>
       <h2>Session</h2>
       <dl id="session"></dl>
+    </section>
+
+    <section>
+      <h2>Captions</h2>
+      <p class="hint">
+        Minuto needs Meet's captions on — they are what tell it who said what. Captions are
+        yours alone, so switching them on changes nothing for anyone else in the call, and
+        hiding them keeps them working while leaving your screen clear.
+      </p>
+      <label class="check">
+        <input id="autoCaptions" type="checkbox" />
+        Switch captions on for me
+      </label>
+      <label class="check">
+        <input id="hideCaptions" type="checkbox" />
+        Keep them off my screen
+      </label>
+      <dl id="captionStatus" style="margin-top: 10px"></dl>
     </section>
 
     <section>

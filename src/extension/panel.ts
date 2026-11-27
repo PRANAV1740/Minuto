@@ -8,6 +8,7 @@
  */
 
 import { normaliseCaptions } from '../fusion/captions.ts';
+import { loadSettings, saveSettings, type Settings } from './settings.ts';
 import type { SessionSnapshot, ToPanel } from './messages.ts';
 
 const POLL_MS = 1000;
@@ -27,6 +28,37 @@ const copied = el('copied');
 const captureButton = el('capture') as HTMLButtonElement;
 const captureStatus = el('captureStatus');
 const captureProblem = el('captureProblem');
+const captionStatus = el('captionStatus');
+const autoCaptions = el('autoCaptions') as HTMLInputElement;
+const hideCaptions = el('hideCaptions') as HTMLInputElement;
+
+/**
+ * When the user last moved a checkbox.
+ *
+ * The panel re-renders from the content script every second, which would
+ * otherwise snap a box back to its old value in the gap before the new one has
+ * been stored and reported.
+ */
+let settingsTouchedAt = 0;
+const SETTLE_MS = 3000;
+
+function showSettings(settings: Settings): void {
+  if (Date.now() - settingsTouchedAt < SETTLE_MS) return;
+  autoCaptions.checked = settings.autoCaptions;
+  hideCaptions.checked = settings.hideCaptions;
+}
+
+for (const [box, key] of [
+  [autoCaptions, 'autoCaptions'],
+  [hideCaptions, 'hideCaptions'],
+] as const) {
+  box.addEventListener('change', () => {
+    settingsTouchedAt = Date.now();
+    void saveSettings({ [key]: box.checked });
+  });
+}
+
+void loadSettings().then(showSettings);
 
 /** Mirrors the offscreen document's state, which is the source of truth. */
 type CaptureState = {
@@ -156,6 +188,7 @@ function renderEmpty(): void {
   latestCapture = null;
   copyButton.disabled = true;
   rows(session, [['status', 'no Meet tab active', 'warn']]);
+  rows(captionStatus, [['captions in Meet', 'no call open']]);
   readers.replaceChildren();
   problems.replaceChildren();
   captions.replaceChildren(
@@ -176,6 +209,16 @@ function render(snapshot: SessionSnapshot): void {
     ['meeting', snapshot.meetCode ?? 'not in a call'],
     ['elapsed', clock(snapshot.elapsedMs)],
     ['starred', String(snapshot.starsMs.length)],
+  ]);
+
+  showSettings(snapshot.settings);
+  rows(captionStatus, [
+    [
+      'captions in Meet',
+      snapshot.captionsOn === null ? 'cannot tell yet' : snapshot.captionsOn ? 'on' : 'off',
+      snapshot.captionsOn === true ? 'ok' : 'warn',
+    ],
+    ['on your screen', snapshot.settings.hideCaptions ? 'hidden' : 'visible'],
   ]);
 
   rows(readers, [
@@ -209,7 +252,10 @@ function render(snapshot: SessionSnapshot): void {
     captions.replaceChildren(
       Object.assign(document.createElement('div'), {
         className: 'empty',
-        textContent: 'Nothing read yet. Switch captions on in Meet.',
+        textContent:
+          snapshot.captionsOn === false
+            ? 'Captions are off in Meet. Minuto will switch them on; or press the CC button.'
+            : 'Nothing read yet — captions appear once somebody speaks.',
       }),
     );
     return;

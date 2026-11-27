@@ -2,7 +2,7 @@
 
 Minutes of meetings from Google Meet, where the words match what was actually said and every decision and task cites the moment it came from.
 
-> **Status: in development.** The pipeline works end to end and is covered by 569 tests. Two things have never met reality: the Chrome extension's reading of Meet's live DOM, and Whisper running on WebGPU inside the extension. Both are built; neither has run in a real call. See [Known gaps](#known-gaps).
+> **Status: in development.** The pipeline works end to end and is covered by 613 tests. Two things have never met reality: the Chrome extension's reading of Meet's live DOM, and Whisper running on WebGPU inside the extension. Both are built; neither has run in a real call. See [Known gaps](#known-gaps).
 
 ![The workbench: a transcript on the left, minutes with timestamp citations on the right](docs/images/workbench.jpg)
 
@@ -117,7 +117,9 @@ npm run build:ext
 npm run check:ext
 ```
 
-Then load `dist/extension` unpacked at `chrome://extensions` with Developer mode on, join a call, switch captions on in Meet, and open the Minuto side panel from the toolbar.
+Then load `dist/extension` unpacked at `chrome://extensions` with Developer mode on, join a call, and open the Minuto side panel from the toolbar.
+
+**You do not have to switch captions on, or look at them.** Minuto needs Meet's captions because they are what tell it who said what, so it turns them on itself and then moves the caption panel off screen — Meet keeps writing captions, the extension keeps reading them, and your call stays clear. Captions in Meet are yours alone, so nobody else in the call sees any change. Both behaviours are checkboxes in the side panel if you would rather do it by hand.
 
 ### 4. Letting a model write them
 

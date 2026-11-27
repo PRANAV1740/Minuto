@@ -7,6 +7,7 @@ import type { CaptionLine } from '../fusion/captions.ts';
 import type { SpeakerSample } from '../fusion/fuse.ts';
 import type { CaptureReport } from './capture-fixture.ts';
 import type { DomReport } from './meet-dom.ts';
+import type { Settings } from './settings.ts';
 
 export type SessionSnapshot = {
   meetCode: string | null;
@@ -14,6 +15,10 @@ export type SessionSnapshot = {
   startedAt: number;
   elapsedMs: number;
   report: DomReport | null;
+  /** Whether Meet's captions are on; null when the control cannot be read. */
+  captionsOn: boolean | null;
+  /** What the content script is currently acting on, so the panel agrees. */
+  settings: Settings;
   /**
    * The redacted DOM capture, carried so the panel can offer it for copying.
    * Saves pasting a script into devtools to get the same thing.

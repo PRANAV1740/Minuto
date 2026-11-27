@@ -163,3 +163,27 @@ Not verified, and only a real run can settle either:
 2. **transformers.js inside an MV3 offscreen document.** Known friction here: WASM paths, the extension CSP, and model fetching. The manifest grants `wasm-unsafe-eval`, which WebAssembly needs under MV3.
 
 Capture and the model report separately, so a first run says which of the two is wrong rather than failing as one lump.
+
+## Captions: on, but out of the way
+
+Minuto needs Meet's captions switched on, because they are the speaker channel
+(docs/ACCURACY.md §2) — Whisper gets the words, captions say who said them.
+Watching a band of subtitles for an hour is a poor trade for that, so the
+extension does two things instead:
+
+- **Switches captions on** when it finds them off, via the CC control. At most
+  three attempts, and never again once it has seen captions on — if you turn
+  them off mid-call that is a decision, not a fault to correct.
+- **Moves the caption panel off screen** with an injected stylesheet
+  (`captions-view.ts`), at full size and `opacity: 0` rather than
+  `display: none`, because a browser can stop doing work on a subtree it is not
+  painting and the entire point is that Meet carries on filling it.
+
+Captions in Meet are a local view setting, so neither is visible to anyone else
+in the call. Both are checkboxes in the side panel, stored in
+`chrome.storage.local`.
+
+Verified in a browser against a mock of Meet's structure: the region lands at
+`left: -20000px`, 960x540, with mutations still firing on every update, while
+the CC button itself stays where it was and clickable — the selector excludes
+buttons, menu items and links so it cannot take away your own control.
