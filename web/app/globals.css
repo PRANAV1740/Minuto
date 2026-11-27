@@ -1,0 +1,401 @@
+:root {
+  --bg: #f6f8fa;
+  --surface: #ffffff;
+  --surface-2: #eef2f6;
+  --ink: #121820;
+  --dim: #58657a;
+  --faint: #8a97aa;
+  --line: #dce3ec;
+  --line-strong: #c2cdda;
+  --accent: #0b7f9e;
+  --accent-bg: #e3f4f9;
+  --warn: #9c2f3f;
+  --warn-bg: #fbe9ec;
+  --ok: #0b7f4e;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0c1016;
+    --surface: #141b24;
+    --surface-2: #1b232e;
+    --ink: #e7eef6;
+    --dim: #93a1b4;
+    --faint: #68768a;
+    --line: #242d3a;
+    --line-strong: #37424f;
+    --accent: #45c8ea;
+    --accent-bg: #0f2c36;
+    --warn: #f08b9c;
+    --warn-bg: #35161c;
+    --ok: #46c48d;
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.6 ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 2.5rem 1rem 4rem;
+}
+
+header.masthead {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+h1 {
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  letter-spacing: -0.02em;
+  margin: 0 0 0.3rem;
+}
+
+.standfirst {
+  color: var(--dim);
+  margin: 0;
+  max-width: 60ch;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+section.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1.25rem;
+  min-width: 0;
+}
+
+h2 {
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin: 0 0 1rem;
+  font-weight: 600;
+}
+
+label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--dim);
+  margin-bottom: 0.3rem;
+}
+
+input[type='text'],
+input[type='date'],
+textarea {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  padding: 0.5rem 0.6rem;
+}
+
+textarea {
+  min-height: 15rem;
+  resize: vertical;
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+}
+
+.field {
+  margin-bottom: 0.9rem;
+}
+
+.check {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--dim);
+  margin-bottom: 1rem;
+}
+
+button {
+  font: inherit;
+  font-weight: 500;
+  padding: 0.55rem 1.1rem;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+button.secondary {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--line-strong);
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.hint {
+  color: var(--faint);
+  font-size: 0.78rem;
+  margin: 0.5rem 0 0;
+}
+
+.notice {
+  border-left: 3px solid var(--accent);
+  background: var(--accent-bg);
+  padding: 0.6rem 0.8rem;
+  border-radius: 0 5px 5px 0;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.notice.bad {
+  border-left-color: var(--warn);
+  background: var(--warn-bg);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.chip {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  color: var(--dim);
+}
+
+.chip.on {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.minutes h3 {
+  font-size: 1.1rem;
+  margin: 0 0 0.75rem;
+}
+
+.minutes h4 {
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin: 1.5rem 0 0.6rem;
+}
+
+.minutes p {
+  margin: 0 0 0.75rem;
+}
+
+.item {
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.item:last-child {
+  border-bottom: none;
+}
+
+.item .cite {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--accent);
+  margin-left: 0.4rem;
+}
+
+.item .because {
+  color: var(--dim);
+}
+
+.owner {
+  display: inline-block;
+  font-size: 11px;
+  padding: 0.15rem 0.45rem;
+  border-radius: 3px;
+  background: var(--surface-2);
+  color: var(--dim);
+  margin-right: 0.4rem;
+}
+
+.owner.none {
+  font-style: italic;
+}
+
+.flagwarn {
+  display: inline-block;
+  font-size: 11px;
+  color: var(--warn);
+  background: var(--warn-bg);
+  padding: 0.15rem 0.45rem;
+  border-radius: 3px;
+  margin-left: 0.4rem;
+}
+
+ul.plain {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+ul.plain li {
+  margin-bottom: 0.35rem;
+}
+
+pre.markdown {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.9rem;
+  overflow-x: auto;
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.empty {
+  color: var(--faint);
+  font-style: italic;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.6rem max(16px, env(safe-area-inset-left, 0px));
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.topbar .brand {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.topbar a.chip {
+  text-decoration: none;
+}
+
+/* ---------- printing ----------
+   The browser's print dialog is the PDF export, so the printed page has to be
+   the minutes and nothing else: no navigation, no buttons, no transcript
+   column, no dark background burning through a printer. */
+@media print {
+  :root {
+    --bg: #fff;
+    --surface: #fff;
+    --surface-2: #fff;
+    --ink: #000;
+    --dim: #333;
+    --faint: #555;
+    --line: #ccc;
+    --line-strong: #999;
+    --accent: #333;
+    --accent-bg: #fff;
+  }
+
+  .topbar,
+  .no-print,
+  .meta,
+  form,
+  button {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  .wrap {
+    max-width: none;
+    padding: 0;
+  }
+
+  .grid {
+    display: block;
+  }
+
+  section.card {
+    border: none;
+    padding: 0;
+    margin-bottom: 1.5rem;
+    break-inside: avoid;
+  }
+
+  .item {
+    break-inside: avoid;
+  }
+
+  pre.markdown {
+    display: none;
+  }
+
+  a {
+    text-decoration: none;
+    color: #000;
+  }
+}

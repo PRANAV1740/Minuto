@@ -1,0 +1,251 @@
+/**
+ * The side panel: shows what the DOM readers are managing to read.
+ *
+ * In this increment the panel is mainly a diagnostic. Its job on a real call
+ * is to answer one question — do the strategies in meet-dom.ts match the
+ * markup Google is actually serving? — and to make the answer obvious without
+ * opening devtools.
+ */
+
+import { normaliseCaptions } from '../fusion/captions.ts';
+import type { SessionSnapshot, ToPanel } from './messages.ts';
+
+const POLL_MS = 1000;
+
+const el = (id: string): HTMLElement => {
+  const node = document.getElementById(id);
+  if (!node) throw new Error(`panel is missing #${id}`);
+  return node;
+};
+
+const session = el('session');
+const readers = el('readers');
+const problems = el('problems');
+const captions = el('captions');
+const copyButton = el('copy') as HTMLButtonElement;
+const copied = el('copied');
+const captureButton = el('capture') as HTMLButtonElement;
+const captureStatus = el('captureStatus');
+const captureProblem = el('captureProblem');
+
+/** Mirrors the offscreen document's state, which is the source of truth. */
+type CaptureState = {
+  capturing: boolean;
+  tier: { tier: string; label: string; model: string; reason: string; warning?: string } | null;
+  modelReady: boolean;
+  modelError: string | null;
+  captureError: string | null;
+  micEnabled: boolean;
+  audioMs: number;
+  windowsSeen: number;
+  windowsSkipped: number;
+  words: number;
+};
+
+let capturing = false;
+
+captureButton.addEventListener('click', () => {
+  captureButton.disabled = true;
+  void chrome.runtime
+    .sendMessage({ kind: 'capture-control', action: capturing ? 'stop' : 'start' })
+    .catch(() => {})
+    .finally(() => {
+      captureButton.disabled = false;
+      void pollCapture();
+    });
+});
+
+function renderCapture(state: CaptureState | null): void {
+  if (!state) {
+    captureButton.textContent = 'Start capture';
+    rows(captureStatus, [['status', 'not started']]);
+    captureProblem.replaceChildren();
+    return;
+  }
+
+  capturing = state.capturing;
+  captureButton.textContent = state.capturing ? 'Stop capture' : 'Start capture';
+
+  rows(captureStatus, [
+    ['tier', state.tier ? `${state.tier.tier} · ${state.tier.label}` : 'deciding…'],
+    ['why', state.tier?.reason ?? '—'],
+    ['model', state.modelReady ? 'ready' : state.modelError ? 'failed' : 'loading…',
+      state.modelReady ? 'ok' : state.modelError ? 'warn' : undefined],
+    ['microphone', state.micEnabled ? 'on' : 'off'],
+    ['audio', clock(state.audioMs)],
+    ['windows', `${state.windowsSeen} (${state.windowsSkipped} silent)`],
+    ['words', String(state.words)],
+  ]);
+
+  const notes = [state.tier?.warning, state.modelError, state.captureError].filter(
+    (note): note is string => Boolean(note),
+  );
+
+  if (notes.length === 0) {
+    captureProblem.replaceChildren();
+    return;
+  }
+
+  const list = document.createElement('ul');
+  list.className = 'warn';
+  list.replaceChildren(
+    ...notes.map((note) => {
+      const item = document.createElement('li');
+      item.textContent = note;
+      return item;
+    }),
+  );
+  captureProblem.replaceChildren(list);
+}
+
+async function pollCapture(): Promise<void> {
+  try {
+    const reply = (await chrome.runtime.sendMessage({
+      kind: 'capture-control',
+      action: 'status',
+    })) as { status?: CaptureState } | undefined;
+    renderCapture(reply?.status ?? null);
+  } catch {
+    renderCapture(null);
+  }
+}
+
+/** Held so the copy button always offers the most recent capture. */
+let latestCapture: unknown = null;
+
+copyButton.addEventListener('click', () => {
+  if (latestCapture === null) return;
+
+  const json = JSON.stringify(latestCapture, null, 2);
+  void navigator.clipboard
+    .writeText(json)
+    .then(() => {
+      copied.textContent = 'copied';
+      copied.hidden = false;
+      setTimeout(() => {
+        copied.hidden = true;
+      }, 2500);
+    })
+    .catch(() => {
+      // Clipboard refused: show the JSON so it can still be selected by hand.
+      copied.textContent = 'clipboard blocked — see console';
+      copied.hidden = false;
+      console.log(json);
+    });
+});
+
+function rows(target: HTMLElement, pairs: readonly [string, string, string?][]): void {
+  target.replaceChildren(
+    ...pairs.flatMap(([label, value, className]) => {
+      const dt = document.createElement('dt');
+      dt.textContent = label;
+      const dd = document.createElement('dd');
+      dd.textContent = value;
+      dd.className = className ? `mono ${className}` : 'mono';
+      return [dt, dd];
+    }),
+  );
+}
+
+const clock = (ms: number): string => {
+  const total = Math.floor(ms / 1000);
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+};
+
+function renderEmpty(): void {
+  latestCapture = null;
+  copyButton.disabled = true;
+  rows(session, [['status', 'no Meet tab active', 'warn']]);
+  readers.replaceChildren();
+  problems.replaceChildren();
+  captions.replaceChildren(
+    Object.assign(document.createElement('div'), {
+      className: 'empty',
+      textContent: 'Open a Google Meet call to begin.',
+    }),
+  );
+}
+
+function render(snapshot: SessionSnapshot): void {
+  const report = snapshot.report;
+
+  latestCapture = snapshot.capture;
+  copyButton.disabled = snapshot.capture === null;
+
+  rows(session, [
+    ['meeting', snapshot.meetCode ?? 'not in a call'],
+    ['elapsed', clock(snapshot.elapsedMs)],
+    ['starred', String(snapshot.starsMs.length)],
+  ]);
+
+  rows(readers, [
+    ['captions', report?.captionRootStrategy ?? 'not found', report?.captionRootStrategy ? 'ok' : 'warn'],
+    ['roster', report?.rosterStrategy ?? 'not found', report?.rosterStrategy ? 'ok' : 'warn'],
+    ['people', String(report?.rosterCount ?? 0)],
+    ['lines on screen', String(report?.captionsRead ?? 0)],
+    ['speaking now', report?.activeSpeaker ?? '—'],
+    ['speaker samples', String(snapshot.speakerSamples.length)],
+  ]);
+
+  if (report && report.problems.length > 0) {
+    const list = document.createElement('ul');
+    list.className = 'warn';
+    list.replaceChildren(
+      ...report.problems.map((problem) => {
+        const item = document.createElement('li');
+        item.textContent = problem;
+        return item;
+      }),
+    );
+    problems.replaceChildren(list);
+  } else {
+    problems.replaceChildren();
+  }
+
+  // Collapsed, so the panel shows utterances rather than Meet's growth steps.
+  const lines = normaliseCaptions(snapshot.captionLines);
+
+  if (lines.length === 0) {
+    captions.replaceChildren(
+      Object.assign(document.createElement('div'), {
+        className: 'empty',
+        textContent: 'Nothing read yet. Switch captions on in Meet.',
+      }),
+    );
+    return;
+  }
+
+  captions.replaceChildren(
+    ...lines.slice(-40).map((line) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'line';
+
+      const who = document.createElement('div');
+      who.className = 'who';
+      who.textContent = `${line.speaker} · ${clock(line.startMs)}`;
+
+      const text = document.createElement('div');
+      text.textContent = line.text;
+
+      wrap.replaceChildren(who, text);
+      return wrap;
+    }),
+  );
+}
+
+async function poll(): Promise<void> {
+  try {
+    const reply = (await chrome.runtime.sendMessage({ kind: 'panel-state' })) as ToPanel | undefined;
+    if (reply?.snapshot) render(reply.snapshot);
+    else renderEmpty();
+  } catch {
+    renderEmpty();
+  }
+}
+
+void poll();
+void pollCapture();
+setInterval(() => {
+  void poll();
+  void pollCapture();
+}, POLL_MS);

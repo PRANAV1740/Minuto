@@ -1,0 +1,13 @@
+# Secrets and local configuration. .env.local holds the development database
+# password, so it must never be committed.
+.env.local
+.env
+
+node_modules/
+dist/
+web/.next/
+web/node_modules/
+*.tsbuildinfo
+
+# Local scratch
+.vercel

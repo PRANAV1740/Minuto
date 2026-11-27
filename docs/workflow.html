@@ -1,0 +1,667 @@
+<title>Minuto Build Workflow</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+
+<style>
+  /* Layout concept: a vertical signal chain, cut once by a hard device/server boundary. */
+  :root {
+    --bg: #f6f8fa;
+    --surface: #ffffff;
+    --surface-2: #eef2f6;
+    --ink: #121820;
+    --ink-dim: #58657a;
+    --ink-faint: #8a97aa;
+    --line: #dce3ec;
+    --line-strong: #c2cdda;
+    --device: #0b7f9e;
+    --device-bg: #e3f4f9;
+    --server: #8a5410;
+    --server-bg: #f8eedd;
+    --flag: #9c2f3f;
+    --flag-bg: #fbe9ec;
+
+    --font-display: 'Space Grotesk', 'Segoe UI', sans-serif;
+    --font-body: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0c1016;
+      --surface: #141b24;
+      --surface-2: #1b232e;
+      --ink: #e7eef6;
+      --ink-dim: #93a1b4;
+      --ink-faint: #68768a;
+      --line: #242d3a;
+      --line-strong: #37424f;
+      --device: #45c8ea;
+      --device-bg: #0f2c36;
+      --server: #e2a850;
+      --server-bg: #2e2211;
+      --flag: #f08b9c;
+      --flag-bg: #35161c;
+      color-scheme: dark;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #0c1016;
+    --surface: #141b24;
+    --surface-2: #1b232e;
+    --ink: #e7eef6;
+    --ink-dim: #93a1b4;
+    --ink-faint: #68768a;
+    --line: #242d3a;
+    --line-strong: #37424f;
+    --device: #45c8ea;
+    --device-bg: #0f2c36;
+    --server: #e2a850;
+    --server-bg: #2e2211;
+    --flag: #f08b9c;
+    --flag-bg: #35161c;
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 920px;
+    margin: 0 auto;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 0 4rem;
+  }
+
+  /* ---------- header ---------- */
+  .masthead {
+    margin-top: calc(-1 * env(safe-area-inset-top, 0px));
+    padding-top: calc(env(safe-area-inset-top, 0px) + 3rem);
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 2.5rem;
+  }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: .75rem;
+  }
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(2rem, 6vw, 3rem);
+    line-height: 1.05;
+    letter-spacing: -.02em;
+    margin: 0 0 .6rem;
+    text-wrap: balance;
+  }
+  .standfirst {
+    font-size: clamp(1rem, 2.4vw, 1.15rem);
+    color: var(--ink-dim);
+    max-width: 60ch;
+    margin: 0 0 1.25rem;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: .5rem; }
+  .chip {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: .3rem .6rem;
+    border-radius: 3px;
+    border: 1px solid var(--line-strong);
+    color: var(--ink-dim);
+    background: var(--surface);
+  }
+  .chip.on { border-color: var(--device); color: var(--device); background: var(--device-bg); }
+
+  /* ---------- sections ---------- */
+  section { margin-bottom: 3.5rem; }
+  h2 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.4rem;
+    letter-spacing: -.01em;
+    margin: 0 0 .4rem;
+    display: flex;
+    align-items: baseline;
+    gap: .7rem;
+    flex-wrap: wrap;
+  }
+  h2 .num {
+    font-family: var(--font-mono);
+    font-size: .75rem;
+    font-weight: 500;
+    color: var(--ink-faint);
+    letter-spacing: .08em;
+  }
+  .lede { color: var(--ink-dim); max-width: 68ch; margin: 0 0 1.5rem; }
+  h3 {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    margin: 0 0 .5rem;
+  }
+  p { margin: 0 0 1rem; }
+  p:last-child { margin-bottom: 0; }
+  strong { font-weight: 600; }
+  code {
+    font-family: var(--font-mono);
+    font-size: .85em;
+    background: var(--surface-2);
+    padding: .1em .35em;
+    border-radius: 3px;
+  }
+
+  /* ---------- boundary split ---------- */
+  .split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--surface);
+  }
+  .split > div { padding: 1.25rem; min-width: 0; }
+  .split > div:first-child {
+    border-right: 2px dashed var(--line-strong);
+    background: var(--device-bg);
+  }
+  .split > div:last-child { background: var(--server-bg); }
+  .split .tag {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    margin-bottom: .6rem;
+  }
+  .split > div:first-child .tag { color: var(--device); }
+  .split > div:last-child .tag { color: var(--server); }
+  .split ul { margin: 0; padding-left: 1.1rem; }
+  .split li { margin-bottom: .35rem; font-size: .9rem; }
+  .split li:last-child { margin-bottom: 0; }
+  @media (max-width: 620px) {
+    .split { grid-template-columns: 1fr; }
+    .split > div:first-child {
+      border-right: none;
+      border-bottom: 2px dashed var(--line-strong);
+    }
+  }
+
+  /* ---------- fusion diagram ---------- */
+  .fusion {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--surface);
+    padding: 1.25rem;
+    overflow-x: auto;
+  }
+  .lane {
+    display: grid;
+    grid-template-columns: 148px 1fr;
+    gap: 1rem;
+    align-items: center;
+    padding: .7rem 0;
+    border-bottom: 1px solid var(--line);
+    min-width: 540px;
+  }
+  .lane:last-of-type { border-bottom: none; }
+  .lane-name {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.35;
+    color: var(--ink-dim);
+  }
+  .lane-name b { display: block; color: var(--ink); font-weight: 500; }
+  .lane-data {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    display: flex;
+    gap: .6rem;
+    align-items: baseline;
+    min-width: 0;
+  }
+  .who {
+    flex: 0 0 auto;
+    padding: .1rem .4rem;
+    border-radius: 3px;
+    background: var(--surface-2);
+    color: var(--ink-dim);
+    font-size: 11px;
+  }
+  .who.sure { background: var(--device-bg); color: var(--device); }
+  .said { color: var(--ink-dim); }
+  .bad { color: var(--flag); text-decoration: underline wavy var(--flag); text-underline-offset: 3px; }
+  .converge {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .9rem 0 .2rem;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--device);
+  }
+  .converge::before,
+  .converge::after {
+    content: "";
+    height: 1px;
+    flex: 1;
+    background: linear-gradient(90deg, var(--line), var(--device));
+  }
+  .converge::after { background: linear-gradient(90deg, var(--device), var(--line)); }
+  .out {
+    margin-top: .2rem;
+    border: 1px solid var(--device);
+    background: var(--device-bg);
+    border-radius: 5px;
+    padding: .8rem 1rem;
+    min-width: 540px;
+  }
+  .out .lane { border: none; padding: 0; }
+  .out .good { color: var(--ink); font-weight: 500; }
+
+  /* ---------- stage list ---------- */
+  .stages { display: flex; flex-direction: column; gap: 0; }
+  .stage {
+    display: grid;
+    grid-template-columns: 54px 1fr auto;
+    gap: 1rem;
+    align-items: start;
+    padding: .85rem 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .sid {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ink-faint);
+    padding-top: .1rem;
+  }
+  .sbody { min-width: 0; }
+  .sbody b { font-weight: 600; }
+  .sbody span { display: block; color: var(--ink-dim); font-size: .875rem; }
+  .where {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding: .25rem .5rem;
+    border-radius: 3px;
+    white-space: nowrap;
+  }
+  .where.dev { background: var(--device-bg); color: var(--device); }
+  .where.srv { background: var(--server-bg); color: var(--server); }
+  .boundary {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: 1rem 0;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--flag);
+  }
+  .boundary::before, .boundary::after {
+    content: "";
+    height: 0;
+    flex: 1;
+    border-top: 2px dashed var(--flag);
+    opacity: .5;
+  }
+  @media (max-width: 560px) {
+    .stage { grid-template-columns: 44px 1fr; }
+    .where { grid-column: 2; justify-self: start; margin-top: .3rem; }
+  }
+
+  /* ---------- journey ---------- */
+  .journey { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .card {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--surface);
+    padding: 1.1rem;
+    min-width: 0;
+  }
+  .card h3 { display: flex; align-items: baseline; gap: .5rem; }
+  .card h3 em {
+    font-family: var(--font-mono);
+    font-style: normal;
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .steps { list-style: none; margin: .75rem 0 0; padding: 0; counter-reset: s; }
+  .steps li {
+    position: relative;
+    padding-left: 1.9rem;
+    margin-bottom: .7rem;
+    font-size: .9rem;
+    counter-increment: s;
+  }
+  .steps li:last-child { margin-bottom: 0; }
+  .steps li::before {
+    content: counter(s);
+    position: absolute;
+    left: 0;
+    top: .05rem;
+    width: 1.3rem;
+    height: 1.3rem;
+    border-radius: 50%;
+    border: 1px solid var(--line-strong);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    display: grid;
+    place-items: center;
+    color: var(--ink-dim);
+  }
+  .steps.zero li::before { border-color: var(--device); color: var(--device); }
+  @media (max-width: 620px) { .journey { grid-template-columns: 1fr; } }
+
+  /* ---------- phases ---------- */
+  .phases { display: flex; flex-direction: column; gap: .6rem; }
+  .phase {
+    display: grid;
+    grid-template-columns: 76px 1fr;
+    gap: 1rem;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--line-strong);
+    border-radius: 5px;
+    background: var(--surface);
+    padding: .9rem 1rem;
+    align-items: start;
+  }
+  .phase.now { border-left-color: var(--device); background: var(--device-bg); }
+  .phase .pid {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--ink-dim);
+  }
+  .phase.now .pid { color: var(--device); }
+  .phase .pbody { min-width: 0; }
+  .phase b { display: block; font-weight: 600; margin-bottom: .15rem; }
+  .phase span { color: var(--ink-dim); font-size: .875rem; }
+  @media (max-width: 480px) {
+    .phase { grid-template-columns: 1fr; gap: .25rem; }
+  }
+
+  /* ---------- decisions ---------- */
+  .table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; }
+  table { border-collapse: collapse; width: 100%; min-width: 480px; background: var(--surface); }
+  th, td { text-align: left; padding: .7rem .9rem; border-bottom: 1px solid var(--line); font-size: .9rem; vertical-align: top; }
+  th {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    font-weight: 500;
+    background: var(--surface-2);
+  }
+  tr:last-child td { border-bottom: none; }
+  td b { font-weight: 600; }
+
+  .note {
+    border-left: 3px solid var(--flag);
+    background: var(--flag-bg);
+    padding: .9rem 1.1rem;
+    border-radius: 0 5px 5px 0;
+    margin-top: 1.5rem;
+  }
+  .note .tag {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--flag);
+    display: block;
+    margin-bottom: .35rem;
+  }
+  .note p { font-size: .9rem; margin: 0; }
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding-top: 1.5rem;
+    color: var(--ink-faint);
+    font-size: .85rem;
+    font-family: var(--font-mono);
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">Design v0.2 · 26 Nov 2026</div>
+    <h1>Minuto Build Workflow</h1>
+    <p class="standfirst">Minutes from a Google Meet call, where the words match what was actually said. Review this, then we build Phase&nbsp;0.</p>
+    <div class="chips">
+      <span class="chip on">accuracy first</span>
+      <span class="chip">free &amp; open source</span>
+      <span class="chip">Google Meet</span>
+      <span class="chip">zero server cost</span>
+    </div>
+  </header>
+
+  <section>
+    <h2><span class="num">01</span> The one idea</h2>
+    <p class="lede">Accuracy, free, and public normally fight each other: good speech recognition costs money per hour, and a free tool's bill grows with every user. Running Whisper on the user's own GPU settles all three at once.</p>
+    <div class="split">
+      <div>
+        <div class="tag">Their machine — all heavy work</div>
+        <ul>
+          <li>Tab audio + microphone capture</li>
+          <li>Voice detection, then Whisper on WebGPU</li>
+          <li>Caption and active-speaker reading</li>
+          <li>Fusion and glossary correction</li>
+        </ul>
+      </div>
+      <div>
+        <div class="tag">Your server — text only</div>
+        <ul>
+          <li>Meeting records and transcripts</li>
+          <li>Summarising into minutes</li>
+          <li>Editing, exports, action items</li>
+          <li>Roughly 60&nbsp;KB per meeting</li>
+        </ul>
+      </div>
+    </div>
+    <p style="margin-top:1rem;color:var(--ink-dim);font-size:.9rem">Audio never crosses that dashed line. That keeps cost at zero however many people use it, and makes <em>your audio never leaves your computer</em> a true claim — the strongest thing a recording tool can say.</p>
+  </section>
+
+  <section>
+    <h2><span class="num">02</span> How the accuracy is won</h2>
+    <p class="lede">Meet hands you two broken views of the same conversation. Captions know exactly who spoke but garble the words. Whisper gets the words right but cannot tell people apart. Each fixes the other's weakness.</p>
+
+    <div class="fusion">
+      <div class="lane">
+        <div class="lane-name"><b>Meet captions</b>names right, words wrong</div>
+        <div class="lane-data">
+          <span class="who sure">Pranav K</span>
+          <span class="said">so we will ship the <span class="bad">geodesic</span> demo by <span class="bad">fryday</span></span>
+        </div>
+      </div>
+      <div class="lane">
+        <div class="lane-name"><b>Whisper on audio</b>words right, no names</div>
+        <div class="lane-data">
+          <span class="who">Speaker ?</span>
+          <span class="said">So we'll ship the Geodesis demo by Friday.</span>
+        </div>
+      </div>
+      <div class="lane">
+        <div class="lane-name"><b>Active-speaker log</b>who, every 400ms</div>
+        <div class="lane-data">
+          <span class="who sure">Pranav K</span>
+          <span class="said">00:14:02 → 00:14:09</span>
+        </div>
+      </div>
+
+      <div class="converge">fuse on time + text overlap</div>
+
+      <div class="out">
+        <div class="lane">
+          <div class="lane-name"><b>Minuto</b>accurate + attributed</div>
+          <div class="lane-data">
+            <span class="who sure">Pranav K</span>
+            <span class="good">So we'll ship the Geodesis demo by Friday.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p style="margin-top:1.25rem">This gives named speakers with no diarisation vendor, which is normally the most expensive line on a transcription bill. Two supports make it hold up: <strong>voice detection before Whisper</strong>, because Whisper invents sentences during silence, and <strong>feeding it the participant names and your project words up front</strong>, which is what turns "geodesic" into "Geodesis".</p>
+  </section>
+
+  <section>
+    <h2><span class="num">03</span> The pipeline</h2>
+    <p class="lede">Eight stages. Each one is retryable on its own, so a failure late in the chain never costs you the recording.</p>
+    <div class="stages">
+      <div class="stage">
+        <div class="sid">S0</div>
+        <div class="sbody"><b>Bind session</b><span>Meet code becomes the key. Pull the title and attendees, build the word list for Whisper.</span></div>
+        <div class="where srv">server</div>
+      </div>
+      <div class="stage">
+        <div class="sid">S1</div>
+        <div class="sbody"><b>Capture</b><span>Tab audio, your microphone, caption lines, active-speaker samples. Buffered locally, survives a dropped connection.</span></div>
+        <div class="where dev">device</div>
+      </div>
+      <div class="stage">
+        <div class="sid">S2</div>
+        <div class="sbody"><b>Detect speech, chunk</b><span>Strip silence, cut 30-second windows with 5 seconds of overlap.</span></div>
+        <div class="where dev">device</div>
+      </div>
+      <div class="stage">
+        <div class="sid">S3</div>
+        <div class="sbody"><b>Transcribe</b><span>Whisper large-v3-turbo on WebGPU. Word timings and confidence kept.</span></div>
+        <div class="where dev">device</div>
+      </div>
+      <div class="stage">
+        <div class="sid">S4</div>
+        <div class="sbody"><b>Stitch and fuse</b><span>Join overlapping windows without losing words, then merge the three capture lanes into named segments.</span></div>
+        <div class="where dev">device</div>
+      </div>
+      <div class="stage">
+        <div class="sid">S5</div>
+        <div class="sbody"><b>Correct names and terms</b><span>Snap near-misses onto known names and project words. Rule-based, so it cannot change meaning.</span></div>
+        <div class="where dev">device</div>
+      </div>
+      <div class="boundary">text crosses · audio is discarded</div>
+      <div class="stage">
+        <div class="sid">S6</div>
+        <div class="sbody"><b>Summarise</b><span>Pull real sentences first, then write minutes from only those. Every decision and task links back to the moment it came from.</span></div>
+        <div class="where srv">server</div>
+      </div>
+      <div class="stage">
+        <div class="sid">S7</div>
+        <div class="sbody"><b>Deliver</b><span>Markdown, PDF, email, or Google Doc — all rendered from the same structured record.</span></div>
+        <div class="where srv">server</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">04</span> What the user does</h2>
+    <p class="lede">The first run carries all the setup. Every meeting after it asks for nothing at all.</p>
+    <div class="journey">
+      <div class="card">
+        <h3>First install <em>once, ~2 min</em></h3>
+        <ol class="steps zero">
+          <li>Add to Chrome.</li>
+          <li>Sign in with Google — one click.</li>
+          <li>Minuto measures the GPU, picks a model, downloads it in the background.</li>
+          <li>Told plainly: high accuracy ready shortly, your first meeting is captured either way.</li>
+        </ol>
+      </div>
+      <div class="card">
+        <h3>Every meeting after <em>zero clicks</em></h3>
+        <ol class="steps">
+          <li>Open any Meet link. Minuto turns itself on.</li>
+          <li>It says once in the chat that it is taking notes, and switches captions on itself.</li>
+          <li>You do nothing. Press Alt+S to mark a moment worth keeping.</li>
+          <li>Call ends, it notices, and minutes arrive in under a minute.</li>
+        </ol>
+      </div>
+    </div>
+    <p style="margin-top:1.25rem">Three choices carry "anyone can use it": <strong>turn captions on for them</strong> rather than telling them to, <strong>detect the end of the call</strong> rather than relying on a stop button, and <strong>never block on the model download</strong> — capture at whatever quality is ready, then quietly re-transcribe and upgrade the minutes once the better model lands.</p>
+  </section>
+
+  <section>
+    <h2><span class="num">05</span> Build order</h2>
+    <p class="lede">Each phase ends in something that works. The risk is concentrated in the first one on purpose.</p>
+    <div class="phases">
+      <div class="phase now">
+        <div class="pid">Phase 0<br>next</div>
+        <div class="pbody"><b>Accuracy spine + scoring</b><span>A local script: audio file in, minutes out. Plus a scoring run that reports word errors, whether names came through, speaker accuracy, and invented facts. No extension, no server, no interface. If the numbers are poor here, nothing after it matters.</span></div>
+      </div>
+      <div class="phase">
+        <div class="pid">Phase 1</div>
+        <div class="pbody"><b>Extension, capture, fusion</b><span>Audio and caption capture, Whisper in the browser, the three-lane fusion, live side panel. Real calls, still no server.</span></div>
+      </div>
+      <div class="phase">
+        <div class="pid">Phase 2</div>
+        <div class="pbody"><b>Accounts, minutes, exports</b><span>Google sign-in, transcript storage, summarising with the citation checks, the minutes editor, Markdown and PDF out.</span></div>
+      </div>
+      <div class="phase">
+        <div class="pid">Phase 3</div>
+        <div class="pbody"><b>Open source release</b><span>Public repo, scores in the README, bring-your-own-key, daily limits. No store review or Google verification needed on this path.</span></div>
+      </div>
+      <div class="phase">
+        <div class="pid">Phase 4</div>
+        <div class="pbody"><b>Depth</b><span>Tasks tracked across meetings, vocabulary that learns per recurring call, transcript search, Docs and Gmail export.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">06</span> Settled</h2>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Question</th><th>Answer</th><th>Why it matters</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>Model size</b></td>
+            <td>Whisper large-v3-turbo</td>
+            <td>Your RTX 3050 runs it faster than realtime. Smaller models drop Hindi spans rather than degrading gently.</td>
+          </tr>
+          <tr>
+            <td><b>Release path</b></td>
+            <td>GitHub and personal use first</td>
+            <td>Keeps Calendar access optional, which keeps you off Google's slow verification queue until you choose otherwise.</td>
+          </tr>
+          <tr>
+            <td><b>Language</b></td>
+            <td>Hinglish and Indian English</td>
+            <td>Your own recordings become the main benchmark. Published Whisper scores are clean English and will flatter you.</td>
+          </tr>
+          <tr>
+            <td><b>Audio storage</b></td>
+            <td>Never uploaded, discarded after use</td>
+            <td>Zero storage cost, far less to go wrong, and a trust claim that is actually true.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note">
+      <span class="tag">Open, needs real recordings</span>
+      <p>Whisper takes a language hint, and for mixed Hindi-English there is no right answer on paper. English transliterates Hindi roughly; Hindi returns Devanagari, wrong for minutes people read in Latin script; automatic detection can flip mid-call and mix both scripts. Phase 0 runs all three over your own calls and picks on measured results.</p>
+    </div>
+  </section>
+
+  <footer>Minuto · workflow for review · next step: Phase 0</footer>
+
+</div>

@@ -1,0 +1,41 @@
+{
+  "name": "minuto",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Accurate minutes from Google Meet calls",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "node --test \"src/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit",
+    "transcribe": "node src/cli/transcribe.ts",
+    "eval": "node src/cli/eval.ts",
+    "build:ext": "node build-extension.mjs",
+    "watch:ext": "node build-extension.mjs --watch",
+    "minutes": "node src/cli/minutes.ts",
+    "web": "npm run dev --workspace web",
+    "web:build": "npm run build --workspace web",
+    "db:start": "\"C:/Program Files/PostgreSQL/17/bin/pg_ctl.exe\" -D \"%LOCALAPPDATA%/Minuto/pgdata\" -l \"%LOCALAPPDATA%/Minuto/postgres.log\" -o \"-p 5433\" start",
+    "db:stop": "\"C:/Program Files/PostgreSQL/17/bin/pg_ctl.exe\" -D \"%LOCALAPPDATA%/Minuto/pgdata\" stop",
+    "db:psql": "\"C:/Program Files/PostgreSQL/17/bin/psql.exe\" -h 127.0.0.1 -p 5433 -U postgres -d minuto_test"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^4.3.2",
+    "pg": "^8.23.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.3.8",
+    "@types/jsdom": "^30.0.0",
+    "@types/node": "22.10.2",
+    "@types/pg": "^8.23.1",
+    "esbuild": "^0.28.2",
+    "jsdom": "^31.0.1",
+    "typescript": "5.7.2"
+  },
+  "workspaces": [
+    "web"
+  ]
+}

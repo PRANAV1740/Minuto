@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Minuto</title>
+    <style>
+      :root {
+        --bg: #f6f8fa;
+        --surface: #ffffff;
+        --ink: #121820;
+        --dim: #58657a;
+        --line: #dce3ec;
+        --ok: #0b7f4e;
+        --warn: #9c2f3f;
+        color-scheme: light;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0c1016;
+          --surface: #141b24;
+          --ink: #e7eef6;
+          --dim: #93a1b4;
+          --line: #242d3a;
+          --ok: #46c48d;
+          --warn: #f08b9c;
+          color-scheme: dark;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 12px;
+        background: var(--bg);
+        color: var(--ink);
+        font: 13px/1.5 system-ui, sans-serif;
+      }
+      h1 { font-size: 15px; margin: 0 0 2px; }
+      .sub { color: var(--dim); font-size: 11px; margin-bottom: 12px; }
+      section {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 10px;
+        margin-bottom: 10px;
+      }
+      h2 {
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--dim);
+        margin: 0 0 8px;
+        font-weight: 600;
+      }
+      dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; margin: 0; }
+      dt { color: var(--dim); }
+      dd { margin: 0; font-variant-numeric: tabular-nums; }
+      .mono { font-family: ui-monospace, monospace; font-size: 11.5px; }
+      .ok { color: var(--ok); }
+      .warn { color: var(--warn); }
+      ul { margin: 0; padding-left: 16px; }
+      li { margin-bottom: 4px; }
+      #captions { max-height: 320px; overflow-y: auto; }
+      .line { padding: 5px 0; border-bottom: 1px solid var(--line); }
+      .line:last-child { border-bottom: none; }
+      .who { font-weight: 600; font-size: 11px; color: var(--dim); }
+      .empty { color: var(--dim); font-style: italic; }
+      .hint { color: var(--dim); font-size: 11px; margin: 0 0 8px; }
+      button {
+        font: inherit;
+        padding: 5px 11px;
+        border: 1px solid var(--line);
+        border-radius: 5px;
+        background: var(--bg);
+        color: var(--ink);
+        cursor: pointer;
+      }
+      button:hover:not(:disabled) { border-color: var(--dim); }
+      button:disabled { opacity: 0.5; cursor: default; }
+      #copied { margin-left: 8px; font-size: 11px; }
+    </style>
+  </head>
+  <body>
+    <h1>Minuto</h1>
+    <div class="sub">Phase 1 · reading only · nothing is recorded or sent</div>
+
+    <section>
+      <h2>Session</h2>
+      <dl id="session"></dl>
+    </section>
+
+    <section>
+      <h2>Meet DOM readers</h2>
+      <dl id="readers"></dl>
+      <div id="problems" style="margin-top: 8px"></div>
+    </section>
+
+    <section>
+      <h2>Audio capture</h2>
+      <p class="hint">
+        Runs Whisper on your own GPU. Audio never leaves this computer.
+      </p>
+      <button id="capture" type="button">Start capture</button>
+      <dl id="captureStatus" style="margin-top: 10px"></dl>
+      <div id="captureProblem" style="margin-top: 8px"></div>
+    </section>
+
+    <section>
+      <h2>Share the diagnostic</h2>
+      <p class="hint">
+        Reports Meet's structure with all names and speech removed. Safe to paste anywhere.
+      </p>
+      <button id="copy" type="button" disabled>Copy diagnostic</button>
+      <span id="copied" class="ok" hidden>copied</span>
+    </section>
+
+    <section>
+      <h2>Captions seen</h2>
+      <div id="captions"></div>
+    </section>
+
+    <script type="module" src="panel.js"></script>
+  </body>
+</html>

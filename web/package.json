@@ -1,0 +1,21 @@
+{
+  "name": "minuto-web",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "auth:migrate": "better-auth-cli migrate --config app/lib/auth.ts"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.3",
+    "@types/react-dom": "^19.3.0"
+  },
+  "dependencies": {
+    "better-auth": "^1.7.28",
+    "next": "^16.4.6",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  }
+}

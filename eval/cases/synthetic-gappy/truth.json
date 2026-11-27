@@ -1,0 +1,138 @@
+{
+  "name": "synthetic-gappy",
+  "note": "PLACEHOLDER. Speech synthesised by Windows TTS; captions below are simulated, not recorded from Meet. Replace with hand-corrected real recordings — see eval/README.md.",
+  "language": "en",
+  "glossary": [
+    "Geodesis",
+    "Pranav",
+    "Asha"
+  ],
+  "segments": [
+    {
+      "startMs": 2000,
+      "endMs": 5529,
+      "speaker": "Pranav K",
+      "text": "So we will ship the Geodesis demo by Friday."
+    },
+    {
+      "startMs": 11529,
+      "endMs": 15563,
+      "speaker": "Asha R",
+      "text": "Pranav will prepare the slide deck and Asha will book the venue."
+    }
+  ],
+  "captions": [
+    {
+      "speaker": "Pranav K",
+      "startMs": 2700,
+      "endMs": 3400,
+      "text": "so we"
+    },
+    {
+      "speaker": "Pranav K",
+      "startMs": 2700,
+      "endMs": 4600,
+      "text": "so we will ship the"
+    },
+    {
+      "speaker": "Pranav K",
+      "startMs": 2700,
+      "endMs": 6200,
+      "text": "so we will ship the geodasist demo by fryday"
+    },
+    {
+      "speaker": "Asha R",
+      "startMs": 12200,
+      "endMs": 13500,
+      "text": "pranav will prepare"
+    },
+    {
+      "speaker": "Asha R",
+      "startMs": 12200,
+      "endMs": 16300,
+      "text": "pranav will prepare the slide deck and asha will book the venue"
+    }
+  ],
+  "speakerSamples": [
+    {
+      "atMs": 2000,
+      "speaker": "Pranav K"
+    },
+    {
+      "atMs": 2400,
+      "speaker": "Pranav K"
+    },
+    {
+      "atMs": 2800,
+      "speaker": "Pranav K"
+    },
+    {
+      "atMs": 3200,
+      "speaker": "Pranav K"
+    },
+    {
+      "atMs": 3600,
+      "speaker": "Pranav K"
+    },
+    {
+      "atMs": 4000,
+      "speaker": "Pranav K"
+    },
+    {
+      "atMs": 4400,
+      "speaker": "Pranav K"
+    },
+    {
+      "atMs": 4800,
+      "speaker": "Pranav K"
+    },
+    {
+      "atMs": 5200,
+      "speaker": "Pranav K"
+    },
+    {
+      "atMs": 11529,
+      "speaker": "Asha R"
+    },
+    {
+      "atMs": 11929,
+      "speaker": "Asha R"
+    },
+    {
+      "atMs": 12329,
+      "speaker": "Asha R"
+    },
+    {
+      "atMs": 12729,
+      "speaker": "Asha R"
+    },
+    {
+      "atMs": 13129,
+      "speaker": "Asha R"
+    },
+    {
+      "atMs": 13529,
+      "speaker": "Asha R"
+    },
+    {
+      "atMs": 13929,
+      "speaker": "Asha R"
+    },
+    {
+      "atMs": 14329,
+      "speaker": "Asha R"
+    },
+    {
+      "atMs": 14729,
+      "speaker": "Asha R"
+    },
+    {
+      "atMs": 15129,
+      "speaker": "Asha R"
+    },
+    {
+      "atMs": 15529,
+      "speaker": "Asha R"
+    }
+  ]
+}
