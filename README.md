@@ -96,7 +96,15 @@ Worth reading before trusting any of it:
 
 ## Licence
 
-[MIT](LICENSE). Use it, change it, ship it.
+[PolyForm Noncommercial 1.0.0](LICENSE).
+
+Use it, change it, build on it and share it — for any **noncommercial** purpose. That explicitly covers personal projects, study, research, and use by charities and government bodies. Modifications and forks are welcome.
+
+What it does not cover is commercial use: selling it, selling something built on it, or running it as part of a business.
+
+**This is source available, not open source.** The OSI definition requires no restriction on field of use, so a noncommercial clause disqualifies it, and the same goes for the Free Software Definition. That matters in practice — some companies forbid non-OSI dependencies outright, and some package ecosystems and licence scanners treat the two very differently.
+
+If you want to use Minuto commercially, open an issue and ask. A separate licence costs nothing to grant.
 
 ## Documentation
 

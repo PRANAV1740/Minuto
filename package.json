@@ -2,7 +2,7 @@
   "name": "minuto",
   "version": "0.0.0",
   "private": true,
-  "description": "Accurate minutes from Google Meet calls",
+  "description": "Minutes of meetings from Google Meet where every decision and task cites the moment it came from",
   "type": "module",
   "engines": {
     "node": ">=24"
@@ -38,5 +38,10 @@
   },
   "workspaces": [
     "web"
-  ]
+  ],
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PRANAV1740/Minuto.git"
+  }
 }
