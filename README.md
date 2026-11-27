@@ -41,9 +41,9 @@ capture ─┬─ tab + mic audio ──→ VAD ──→ Whisper (your GPU) ─
 
 **Nothing reaches the minutes uncited.** A model only ever sees extracted sentences, never the raw transcript, so it has nothing to invent from. Anything it cites that it was not shown is refused, and any name or number not present in the cited text is flagged rather than asserted.
 
-## Running it
+## Setup
 
-Requires Node 24+, ffmpeg, and Postgres for the web app.
+Node 24 or newer, plus [ffmpeg](https://ffmpeg.org/) if you want to transcribe audio, plus Postgres if you want the web app to remember anything.
 
 ```powershell
 npm install
@@ -53,22 +53,140 @@ npm install
 npm test
 ```
 
-| Command | What it does |
+If the tests pass you have a working install. Nothing else is required to make minutes from a transcript.
+
+## Using it
+
+### 1. You already have a transcript or rough notes
+
+The fastest path, and the one that needs no audio, no key and no database.
+
+Put the transcript in a text file, one line per utterance:
+
+```
+[0:11] Pranav K: So we'll ship the demo on Friday.
+[0:26] Asha R: I will prepare the slide deck by Thursday.
+Ravi M: Can someone chase the venue invoice?
+```
+
+Timestamps are optional, speaker names are optional, and a line with neither continues the line above it — so pasting wrapped text from a chat log works.
+
+```powershell
+npm run minutes -- transcript.txt --date 2026-11-25 --glossary "Geodesis, Pranav, Asha, Ravi"
+```
+
+You get minutes on stdout with decisions, action items and open questions, each carrying the timestamp it came from.
+
+**Always pass `--glossary`.** It is the single biggest accuracy lever in the whole system: names and project words get corrected (`geodasist` → `Geodesis`), and anything in it counts as known when the gates check what the minutes claim. Thirty seconds of typing buys more than any other setting.
+
+`--date` turns "by Thursday" into a real date. Without it the phrase stays in the text but no due date is set.
+
+### 2. You have a recording
+
+```powershell
+npm run transcribe -- recording.m4a --language en --glossary "Geodesis, Pranav, Asha"
+```
+
+Any format ffmpeg reads. The first run downloads a Whisper model and caches it, so it is slow once and fast afterwards. The output tells you how fast it ran relative to the audio — below 1.0x means transcription takes longer than the meeting did.
+
+To go straight on to minutes, ask for timestamped lines:
+
+```powershell
+npm run transcribe -- recording.m4a --lines > transcript.txt
+```
+
+```powershell
+npm run minutes -- transcript.txt --glossary "Geodesis, Pranav, Asha"
+```
+
+Without `--lines` you get one unbroken paragraph, which `minutes` reads as a single segment — so every citation would point at 0:00. With it, lines break where the speaker paused and the citations land where they should.
+
+Audio alone cannot say *who* spoke, so the lines carry no names. Add them by hand before making minutes if you want owners attributed, or let the extension do it from Meet's captions.
+
+Use `--model onnx-community/whisper-large-v3-turbo` for better accuracy on Hinglish or accented English, at the cost of speed on CPU.
+
+### 3. You are in a Google Meet call
+
+> **Not yet verified in a real call.** The extension is built and its logic is tested, but Meet's live markup has never been read by it. Expect to report what the diagnostic says rather than to get minutes on the first try — see [src/extension/README.md](src/extension/README.md).
+
+```powershell
+npm run build:ext
+```
+
+```powershell
+npm run check:ext
+```
+
+Then load `dist/extension` unpacked at `chrome://extensions` with Developer mode on, join a call, switch captions on in Meet, and open the Minuto side panel from the toolbar.
+
+### 4. Letting a model write them
+
+By default minutes are assembled from sentences lifted verbatim out of the transcript. That is accurate but blunt. A language model rewrites them into prose — constrained to those same sentences, so it has nothing to invent from.
+
+Set a key before running anything:
+
+```powershell
+$env:MINUTO_API_KEY = "your-key"
+```
+
+Gemini by default. `MINUTO_PROVIDER` also accepts `groq` or `openai-compatible` (with `MINUTO_BASE_URL`), and `MINUTO_MODEL` overrides the model. Free tiers are plenty for a few meetings a day.
+
+If the key is missing, the quota is spent, or the model returns nonsense, it falls back to extraction and tells you which path wrote the minutes. It never fails to produce something.
+
+### 5. Saving, editing and sharing
+
+Everything above is one-shot. To keep meetings, correct them and come back to them, run the web app.
+
+```powershell
+npm run db:start
+```
+
+```powershell
+npm run web
+```
+
+Open [localhost:3000](http://localhost:3000), create an account, paste a transcript and press **Make minutes**, then **Save and edit**.
+
+On a saved meeting you can fix the owner the pipeline guessed wrong, set a due date, and tick tasks off — the corrections stick. Task text and citations are deliberately not editable, because those are what tie each item to something actually said.
+
+To get the minutes out, use the export buttons:
+
+| Button | Use it for |
 |---|---|
-| `npm run minutes -- transcript.txt` | Transcript → minutes. No API key needed |
-| `npm run transcribe -- audio.m4a` | Audio → transcript with Whisper |
-| `npm run eval` | Score the pipeline against `eval/cases` |
-| `npm run web` | The web app at localhost:3000 |
-| `npm run build:ext` | Build the Chrome extension into `dist/extension` |
-| `npm run db:start` | Start the local development database |
+| **Copy formatted** | Pasting into Google Docs, Gmail or Word with the table intact |
+| **Copy Markdown** | GitHub, Notion, Obsidian |
+| **Download .md / .txt** | Files |
+| **Print / PDF** | Your browser's print dialog, which includes Save as PDF |
 
-Optional, for model-written minutes rather than extracted sentences:
+From the CLI the same formats are `--format md`, `txt` or `html`.
 
+Without Postgres the app still runs, but holds everything in memory and says so — nothing survives a restart.
+
+Google sign-in needs an OAuth client you create yourself: [docs/GOOGLE-SIGNIN.md](docs/GOOGLE-SIGNIN.md). Email and password works without it.
+
+### 6. Checking how accurate it is
+
+```powershell
+npm run eval
 ```
-MINUTO_API_KEY=...        # Gemini by default; also groq or openai-compatible
-```
 
-Without a key it falls back to rule-based extraction, which always works and still cites everything.
+Scores the pipeline against the cases in `eval/cases` and reports word error rate, proper-noun recall, speaker accuracy and hallucinations separately.
+
+The one case that ships is synthesised speech and proves nothing about real accuracy. Adding two or three hand-corrected recordings of your own meetings is the highest-value thing you can do for this project — see [eval/README.md](eval/README.md).
+
+## Command reference
+
+| Command | |
+|---|---|
+| `npm test` | Run the test suite |
+| `npm run minutes -- <file>` | Transcript → minutes |
+| `npm run transcribe -- <audio>` | Audio → transcript |
+| `npm run eval` | Score the pipeline |
+| `npm run web` | Web app on localhost:3000 |
+| `npm run db:start` / `db:stop` / `db:psql` | Local database |
+| `npm run build:ext` / `check:ext` / `watch:ext` | Chrome extension |
+
+Add `--help` to any of the four scripts for its options.
 
 ## Layout
 

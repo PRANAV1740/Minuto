@@ -19,6 +19,7 @@ import { transcribePcm } from '../asr/transcribe.ts';
 import { createWhisperRecogniser } from '../asr/whisper.ts';
 import { correctWithGlossary } from '../glossary/correct.ts';
 import { formatTimestamp } from '../minutes/render.ts';
+import { groupIntoLines } from '../asr/lines.ts';
 
 const USAGE = `
 Usage: npm run transcribe -- <audio-file> [options]
@@ -30,6 +31,7 @@ Usage: npm run transcribe -- <audio-file> [options]
   --overlap <seconds>  window overlap (default 5)
   --glossary <a,b,c>   names and terms to snap near-misses onto
   --no-vad             transcribe silence too (it will hallucinate)
+  --lines              timestamped lines, ready to feed to: npm run minutes
   --json               print words with timings instead of prose
 `.trim();
 
@@ -49,6 +51,7 @@ async function main(): Promise<void> {
       overlap: { type: 'string' },
       glossary: { type: 'string' },
       'no-vad': { type: 'boolean' },
+      lines: { type: 'boolean' },
       json: { type: 'boolean' },
       help: { type: 'boolean' },
     },
@@ -130,6 +133,19 @@ async function main(): Promise<void> {
   // ---- output ----
   if (values.json) {
     console.log(JSON.stringify(words, null, 2));
+    return;
+  }
+
+  // Timestamped lines rather than one blob, so `npm run minutes` reads it
+  // back as many segments and the citations point somewhere real.
+  if (values.lines) {
+    // Correct each line rather than the whole blob, so a multi-word glossary
+    // term is still matched but the line boundaries survive.
+    console.log(
+      groupIntoLines(words)
+        .map((line) => `[${formatTimestamp(line.startMs)}] ${correctWithGlossary(line.text, terms).text}`)
+        .join('\n'),
+    );
     return;
   }
 
