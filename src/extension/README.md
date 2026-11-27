@@ -8,6 +8,14 @@
 npm run build:ext
 ```
 
+```powershell
+npm run check:ext
+```
+
+The second one is a preflight: it checks the manifest, that every file it
+names was actually emitted, and that each bundle parses. A wasted load costs
+a meeting rather than a minute, so it is worth the two seconds.
+
 Then in Chrome:
 
 1. Go to `chrome://extensions`

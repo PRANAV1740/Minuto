@@ -19,7 +19,8 @@
     "web:build": "npm run build --workspace web",
     "db:start": "\"C:/Program Files/PostgreSQL/17/bin/pg_ctl.exe\" -D \"%LOCALAPPDATA%/Minuto/pgdata\" -l \"%LOCALAPPDATA%/Minuto/postgres.log\" -o \"-p 5433\" start",
     "db:stop": "\"C:/Program Files/PostgreSQL/17/bin/pg_ctl.exe\" -D \"%LOCALAPPDATA%/Minuto/pgdata\" stop",
-    "db:psql": "\"C:/Program Files/PostgreSQL/17/bin/psql.exe\" -h 127.0.0.1 -p 5433 -U postgres -d minuto_test"
+    "db:psql": "\"C:/Program Files/PostgreSQL/17/bin/psql.exe\" -h 127.0.0.1 -p 5433 -U postgres -d minuto_test",
+    "check:ext": "node scripts/check-extension.mjs"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.3.2",
