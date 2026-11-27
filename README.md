@@ -86,6 +86,10 @@ Worth reading before trusting any of it:
 - **Google sign-in needs credentials.** Minuto's side is built and verified; the OAuth client has to be created by hand ([docs/GOOGLE-SIGNIN.md](docs/GOOGLE-SIGNIN.md)). Email and password works meanwhile.
 - **No rate limiting or quotas.** Needed before anyone but you uses it.
 
+## Licence
+
+[MIT](LICENSE). Use it, change it, ship it.
+
 ## Documentation
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — the shape of the system and why

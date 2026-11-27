@@ -1,0 +1,17 @@
+# Normalise line endings so a contributor on macOS or Linux does not see the
+# whole tree as modified. Git stores LF; Windows checkouts still get CRLF
+# where the tool chain wants it.
+* text=auto eol=lf
+
+# Binary, never normalised or diffed as text.
+*.wav   binary
+*.m4a   binary
+*.mp3   binary
+*.webm  binary
+*.png   binary
+*.jpg   binary
+*.ico   binary
+*.pdf   binary
+
+# Generated: keep it out of diffs and language statistics.
+package-lock.json  linguist-generated=true -diff
