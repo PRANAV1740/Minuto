@@ -154,6 +154,20 @@ button:focus-visible {
   margin-bottom: 1rem;
 }
 
+a {
+  color: var(--accent);
+  text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  text-underline-offset: 2px;
+}
+
+a:hover {
+  text-decoration-color: var(--accent);
+}
+
+.item a strong {
+  color: var(--ink);
+}
+
 button {
   font: inherit;
   font-weight: 500;

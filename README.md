@@ -4,6 +4,14 @@ Minutes of meetings from Google Meet, where the words match what was actually sa
 
 > **Status: in development.** The pipeline works end to end and is covered by 569 tests. Two things have never met reality: the Chrome extension's reading of Meet's live DOM, and Whisper running on WebGPU inside the extension. Both are built; neither has run in a real call. See [Known gaps](#known-gaps).
 
+![The workbench: a transcript on the left, minutes with timestamp citations on the right](docs/images/workbench.jpg)
+
+*Paste a transcript, get minutes. `geodasist` was corrected to `Geodesis` from the glossary, `by Thursday` resolved to a real date, and every decision and task carries the timestamp it came from.*
+
+![A saved meeting: editable owners and due dates beside the transcript](docs/images/editor.jpg)
+
+*A saved meeting. Owners and due dates are editable and the correction sticks; the task text and its citations are not, because those are what tie each item to something actually said.*
+
 ## Why it exists
 
 Most meeting-notes tools optimise word error rate and hide everything else. Minuto tracks four numbers separately, because they fail differently:
