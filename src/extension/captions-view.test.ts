@@ -5,7 +5,9 @@ import { JSDOM } from 'jsdom';
 import {
   captionsAreOn,
   captionControlLabels,
+  markCaptionRegion,
   setCaptionsHidden,
+  CAPTION_MARK,
   HIDE_STYLE_ID,
   HIDE_CAPTIONS_CSS,
 } from './captions-view.ts';
@@ -143,8 +145,55 @@ test('showing when nothing was hidden is harmless', () => {
   assert.equal(doc.getElementById(HIDE_STYLE_ID), null);
 });
 
-test('the rule targets the caption region', () => {
-  assert.match(HIDE_CAPTIONS_CSS, /\[aria-label\*=.?aption/i);
+test('the rule targets the marked element and nothing else', () => {
+  assert.match(HIDE_CAPTIONS_CSS, new RegExp(`\\[${CAPTION_MARK}\\]`));
+});
+
+test('the rule never selects by label', () => {
+  // It used to, and it matched Meet's own "Captions and translation" dialog:
+  // a role="dialog" whose label contains "aption", parked off screen with
+  // pointer-events: none, so the user could not reach the switch that turns
+  // captions on. A selector written from a guess eventually matches
+  // something else.
+  assert.equal(/aria-label/i.test(HIDE_CAPTIONS_CSS), false);
+});
+
+test('marking an element is what makes it hidden', () => {
+  const doc = dom('<div id="region" role="region" aria-label="Captions"></div>');
+  const region = doc.getElementById('region')!;
+
+  markCaptionRegion(doc, region);
+  assert.equal(region.getAttribute(CAPTION_MARK), 'true');
+});
+
+test('a settings dialog is left alone', () => {
+  const doc = dom(
+    '<div id="dialog" role="dialog" aria-label="Captions and translation"></div>' +
+      '<div id="region" role="region" aria-label="Captions"></div>',
+  );
+
+  markCaptionRegion(doc, doc.getElementById('region'));
+  assert.equal(doc.getElementById('dialog')!.hasAttribute(CAPTION_MARK), false);
+});
+
+test('the mark moves rather than accumulating', () => {
+  // Meet rebuilds the caption container, and a stale mark would leave an
+  // orphaned piece of the page parked off screen for the rest of the call.
+  const doc = dom('<div id="old"></div><div id="new"></div>');
+
+  markCaptionRegion(doc, doc.getElementById('old'));
+  markCaptionRegion(doc, doc.getElementById('new'));
+
+  assert.equal(doc.getElementById('old')!.hasAttribute(CAPTION_MARK), false);
+  assert.equal(doc.getElementById('new')!.getAttribute(CAPTION_MARK), 'true');
+  assert.equal(doc.querySelectorAll(`[${CAPTION_MARK}]`).length, 1);
+});
+
+test('marking nothing unhides everything', () => {
+  const doc = dom('<div id="old"></div>');
+  markCaptionRegion(doc, doc.getElementById('old'));
+  markCaptionRegion(doc, null);
+  assert.equal(doc.querySelectorAll(`[${CAPTION_MARK}]`).length, 0);
 });
 
 test('the caption region is moved off screen, not removed from the layout', () => {

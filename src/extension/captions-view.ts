@@ -25,16 +25,30 @@
 export const HIDE_STYLE_ID = 'minuto-hide-captions';
 
 /**
- * Moves the caption region off screen while leaving it rendered.
+ * The attribute the content script puts on the transcript, and the only thing
+ * the stylesheet below touches.
  *
- * `:not(button)` and friends matter: four elements in a real call carry
- * "caption" in their label, and two of them are the CC toggle and a menu
- * entry. Hiding those would take away the user's own control over captions,
- * which is the opposite of helpful.
+ * It used to match `[aria-label*="aption"]` with a pile of `:not()` clauses,
+ * which is how Minuto came to hide Meet's own "Captions and translation"
+ * dialog — a `div[role="dialog"]` whose label contains "aption", moved off
+ * screen with `pointer-events: none`, so the user could neither see nor click
+ * the switch that turns captions on. A rule written from a guess about what
+ * matches will eventually match something else.
+ *
+ * Marking the element the reader actually chose means the thing that gets
+ * hidden and the thing that gets read are the same element, by construction.
+ */
+export const CAPTION_MARK = 'data-minuto-captions';
+
+/**
+ * Moves the marked caption region off screen while leaving it rendered.
+ *
+ * At full size and `opacity: 0` rather than `display: none`, because a
+ * browser can stop doing work on a subtree it is not painting and the entire
+ * point is that Meet carries on filling it.
  */
 export const HIDE_CAPTIONS_CSS = `
-[aria-label*="aption"]:not(button):not(a):not([role="button"]):not([role="menuitem"]),
-[aria-label*="ubtitle"]:not(button):not(a):not([role="button"]):not([role="menuitem"]) {
+[${CAPTION_MARK}] {
   position: fixed !important;
   left: -20000px !important;
   top: 0px !important;
@@ -48,6 +62,21 @@ export const HIDE_CAPTIONS_CSS = `
   z-index: -1 !important;
 }
 `.trim();
+
+/**
+ * Points the stylesheet at one element, and only that one.
+ *
+ * Clearing the old mark matters: Meet rebuilds the caption container, and a
+ * stale mark would leave an orphaned piece of the page parked off screen for
+ * the rest of the call.
+ */
+export function markCaptionRegion(doc: Document, region: Element | null): void {
+  for (const marked of doc.querySelectorAll(`[${CAPTION_MARK}]`)) {
+    if (marked !== region) marked.removeAttribute(CAPTION_MARK);
+  }
+
+  region?.setAttribute(CAPTION_MARK, 'true');
+}
 
 /** Controls, as opposed to the transcript region: anything clickable. */
 const CONTROL_SELECTOR =

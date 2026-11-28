@@ -297,3 +297,28 @@ The capture also came back with the one label that mattered reduced to
 redaction allowlist now covers settings vocabulary. A capture that hides the
 answer to the question it was taken to answer is worth little, and none of
 those words appears in anybody's name.
+
+## Round seven: Minuto was hiding the switch
+
+"Can't turn them on." The hide rule selected
+
+    [aria-label*="aption"]:not(button):not(a):not([role="button"]):not([role="menuitem"])
+
+and Meet's settings panel is `div[role="dialog"][aria-label="Captions and
+translation"]`. It matched. For several calls Minuto had been moving the
+panel that contains the captions switch off screen at `pointer-events: none`,
+so it could be neither seen nor clicked — while the side panel advised
+switching captions on in it.
+
+The stylesheet now targets one attribute, `data-minuto-captions`, which the
+content script puts on whatever `findCaptionRoot` chose. The element that
+gets hidden and the element that gets read are now the same element by
+construction, rather than by two selectors that have to agree. The mark moves
+when Meet rebuilds the container, so nothing is left parked off screen.
+
+A selector written from a guess about what it matches will eventually match
+something else. The tests now assert the rule contains no `aria-label` at all.
+
+Verified in a browser: region at `left: -20000px` and off screen, the dialog
+at opacity 1 and on screen, `elementFromPoint` over the switch returning the
+switch, and the click registering.

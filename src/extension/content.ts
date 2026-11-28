@@ -29,6 +29,7 @@ import {
   captionControlLabels,
   captionsAreOn,
   findCaptionsToggle,
+  markCaptionRegion,
   setCaptionsHidden,
 } from './captions-view.ts';
 import { DEFAULT_SETTINGS, loadSettings, onSettingsChange, type Settings } from './settings.ts';
@@ -125,6 +126,10 @@ function attachObserver(): void {
  * names.
  */
 function manageCaptions(): void {
+  // Marked first, so the stylesheet can only ever act on the element the
+  // reader itself chose. Hiding by label matched Meet's own captions settings
+  // dialog and put the switch for turning captions on out of reach.
+  markCaptionRegion(document, findCaptionRoot(document)?.element ?? null);
   setCaptionsHidden(document, settings.hideCaptions);
 
   const on = captionsAreOn(document);
