@@ -12,7 +12,7 @@
  * a real meeting, and a wasted attempt costs a meeting rather than a minute.
  */
 
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 
@@ -67,6 +67,23 @@ const referenced = [
 for (const file of referenced) {
   check(`file present: ${file}`, existsSync(join(OUT, file)));
 }
+
+// ---- the ONNX runtime is shipped, not fetched ----
+//
+// Manifest V3 refuses to load script from a remote origin, so a missing ort/
+// directory does not degrade to a slow first run: the model never loads at
+// all, and the error names a CDN rather than this directory.
+const ortDir = join(OUT, 'ort');
+const ort = existsSync(ortDir) ? readdirSync(ortDir) : [];
+
+check('onnxruntime bundled (not fetched from a CDN)', ort.length > 0, `${ort.length} files`);
+for (const variant of ['ort-wasm-simd-threaded.mjs', 'ort-wasm-simd-threaded.jsep.mjs']) {
+  check(`ort runtime: ${variant}`, ort.includes(variant));
+}
+check(
+  'ort wasm binaries present',
+  ort.filter((file) => file.endsWith('.wasm')).length > 0,
+);
 
 // ---- pages point at scripts that exist ----
 for (const page of ['panel.html', 'offscreen.html']) {

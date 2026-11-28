@@ -187,3 +187,41 @@ Verified in a browser against a mock of Meet's structure: the region lands at
 `left: -20000px`, 960x540, with mutations still firing on every update, while
 the CC button itself stays where it was and clickable — the selector excludes
 buttons, menu items and links so it cannot take away your own control.
+
+## What a real call told us, round three
+
+Captions on, hidden, 1 participant, 4 minutes. Two failures, neither of them
+the hiding:
+
+**The caption panel did stay off screen** — `on your screen: hidden`, and no
+subtitles anywhere in the call. That part works.
+
+**`captions in Meet: cannot tell yet`.** No control matched, so auto-enable
+never fired: it returns early on `null` rather than clicking at nothing. The
+likely cause is the side panel — it narrows the Meet window until the toolbar
+collapses and captions move into the overflow menu, where the entry is a
+`menuitemcheckbox` labelled "Captions" with its state in `aria-checked`, not a
+button labelled "Turn on captions". `findCaptionsToggle` now reads both, and
+the panel lists every caption-ish control label it found so the next failure
+names itself instead of costing another meeting. A control inside a menu that
+has never been opened is not in the DOM at all, though, so in a narrow window
+the user still has to press the CC button or `c` once.
+
+**The model never loaded.** Manifest V3 forbids loading script from a remote
+origin, and transformers.js imports onnxruntime's WASM runtime from jsDelivr:
+
+    no available backend found. ERR: [webgpu] TypeError: Failed to fetch
+    dynamically imported module: https://cdn.jsdelivr.net/npm/onnxruntime-web
+    @1.31.0-dev.../ort-wasm-simd-threaded.asyncify.mjs
+
+The runtime now ships inside the extension (~82 MB of `ort/`, all variants,
+since which one ORT picks depends on the browser's WASM feature detection) and
+`wasmPaths` points at `chrome.runtime.getURL('ort/')`. Threads are forced to 1:
+they need SharedArrayBuffer, which needs cross-origin isolation, which an
+extension page does not have, and the resulting error reads like a missing
+file. This is the MV3 friction the file header warned about; it is fixed but
+not yet confirmed in Chrome.
+
+**Still unknown:** everything needing a second participant. One person in the
+call means no speaker attribution, no active-speaker signal, and no caption
+collapsing to observe.

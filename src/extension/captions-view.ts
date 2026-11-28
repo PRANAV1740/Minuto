@@ -49,19 +49,68 @@ export const HIDE_CAPTIONS_CSS = `
 }
 `.trim();
 
+/** Controls, as opposed to the transcript region: anything clickable. */
+const CONTROL_SELECTOR =
+  'button[aria-label], a[aria-label], [role="button"][aria-label], ' +
+  '[role="menuitem"][aria-label], [role="menuitemcheckbox"][aria-label], ' +
+  '[role="switch"][aria-label], [role="checkbox"][aria-label]';
+
+const mentionsCaptions = (label: string): boolean => /caption|subtitle/i.test(label);
+
 /**
- * The CC toggle, identified by what it offers to do rather than by position.
+ * Controls that mention captions but say nothing about whether they are on.
  *
- * Measured in a real call: several controls carry "caption" in their label,
- * including a "Jump to most recent captions" button inside the transcript. The
- * toggle is the one that offers to turn captions on or off.
+ * Measured in a real call: a "Jump to most recent captions" button sits inside
+ * the transcript, and there is a caption-language entry in the settings menu.
+ * Treating either as the toggle would make the extension click the wrong thing
+ * and then report that captions were on.
+ */
+const NOT_A_TOGGLE = /jump|most recent|settings|language|translate|position|size/i;
+
+const labelOf = (element: Element): string => element.getAttribute('aria-label') ?? '';
+
+/**
+ * Every caption-ish control on the page, by label.
+ *
+ * This exists for the diagnostic rather than for the logic. When detection
+ * fails the only useful question is what was actually on the page, and
+ * guessing at Google's wording a second time is how a whole call gets wasted.
+ * These are interface labels, never anything anyone said.
+ */
+export function captionControlLabels(doc: Document): string[] {
+  const seen = new Set<string>();
+
+  for (const element of doc.querySelectorAll(CONTROL_SELECTOR)) {
+    const label = labelOf(element).trim();
+    if (label !== '' && mentionsCaptions(label)) seen.add(label);
+  }
+
+  return [...seen];
+}
+
+/**
+ * The captions toggle, identified by what it offers to do rather than by
+ * position — or, when the wording gives nothing away, by the state it reports.
+ *
+ * Both halves are needed. In a wide window Meet renders a toolbar button
+ * labelled "Turn on captions"; in a narrow one — which is what the side panel
+ * makes — the toolbar collapses and captions move into a menu, where the entry
+ * is labelled "Captions" and carries its state in `aria-checked` instead.
  */
 export function findCaptionsToggle(doc: Document): Element | null {
+  const controls = [...doc.querySelectorAll(CONTROL_SELECTOR)].filter((element) => {
+    const label = labelOf(element);
+    return mentionsCaptions(label) && !NOT_A_TOGGLE.test(label);
+  });
+
+  const worded = controls.find((element) => /turn\s+(on|off)/i.test(labelOf(element)));
+  if (worded) return worded;
+
   return (
-    [...doc.querySelectorAll('button[aria-label], [role="button"][aria-label]')].find((element) => {
-      const label = element.getAttribute('aria-label') ?? '';
-      return /caption|subtitle/i.test(label) && /turn\s+(on|off)/i.test(label);
-    }) ?? null
+    controls.find(
+      (element) =>
+        element.hasAttribute('aria-pressed') || element.hasAttribute('aria-checked'),
+    ) ?? null
   );
 }
 
@@ -76,9 +125,14 @@ export function captionsAreOn(doc: Document): boolean | null {
   const toggle = findCaptionsToggle(doc);
   if (!toggle) return null;
 
-  const label = toggle.getAttribute('aria-label') ?? '';
+  const label = labelOf(toggle);
   if (/turn\s+off/i.test(label)) return true;
   if (/turn\s+on/i.test(label)) return false;
+
+  const state = toggle.getAttribute('aria-pressed') ?? toggle.getAttribute('aria-checked');
+  if (state === 'true') return true;
+  if (state === 'false') return false;
+
   return null;
 }
 

@@ -4,6 +4,7 @@ import { JSDOM } from 'jsdom';
 
 import {
   captionsAreOn,
+  captionControlLabels,
   setCaptionsHidden,
   HIDE_STYLE_ID,
   HIDE_CAPTIONS_CSS,
@@ -39,6 +40,79 @@ test('no captions button at all is unknown, not off', () => {
 
 test('a captions button whose label says neither is unknown', () => {
   assert.equal(captionsAreOn(dom('<button aria-label="Captions settings"></button>')), null);
+});
+
+test('a pressed toggle means captions are on, whatever the label says', () => {
+  // Measured in a real call: with the side panel open the Meet window is
+  // narrow and the toolbar collapses, so the control that survives may be a
+  // plain "Captions" button or a menu entry with no "turn on/off" wording.
+  assert.equal(captionsAreOn(dom('<button aria-label="Captions" aria-pressed="true"></button>')), true);
+  assert.equal(captionsAreOn(dom('<button aria-label="Captions" aria-pressed="false"></button>')), false);
+});
+
+test('a checked menu entry counts the same way', () => {
+  assert.equal(
+    captionsAreOn(dom('<div role="menuitemcheckbox" aria-label="Captions" aria-checked="true"></div>')),
+    true,
+  );
+  assert.equal(
+    captionsAreOn(dom('<div role="menuitemcheckbox" aria-label="Captions" aria-checked="false"></div>')),
+    false,
+  );
+});
+
+test('the explicit wording wins over a state attribute elsewhere', () => {
+  const doc = dom(
+    '<button aria-label="Captions settings" aria-pressed="true"></button>' +
+      '<button aria-label="Turn on captions"></button>',
+  );
+  assert.equal(captionsAreOn(doc), false);
+});
+
+test('controls that only mention captions in passing are not toggles', () => {
+  // A jump-to-latest button and a settings entry both carry "captions" and
+  // neither says anything about whether captions are on.
+  assert.equal(
+    captionsAreOn(dom('<button aria-label="Jump to most recent captions" aria-pressed="true"></button>')),
+    null,
+  );
+  assert.equal(
+    captionsAreOn(dom('<button aria-label="Caption language settings" aria-pressed="true"></button>')),
+    null,
+  );
+});
+
+// ---------- captionControlLabels ----------
+
+test('every caption-ish control is listed, for the diagnostic', () => {
+  // When detection fails, the only useful question is what was actually on
+  // the page. Guessing at Meet's wording twice in a row is how a whole call
+  // gets wasted.
+  const doc = dom(
+    '<button aria-label="Turn on captions (c)"></button>' +
+      '<button aria-label="Jump to most recent captions"></button>' +
+      '<div role="button" aria-label="Chat with everyone"></div>' +
+      '<div role="region" aria-label="Captions"></div>',
+  );
+  assert.deepEqual(captionControlLabels(doc), [
+    'Turn on captions (c)',
+    'Jump to most recent captions',
+  ]);
+});
+
+test('the same label twice is listed once', () => {
+  const doc = dom(
+    '<button aria-label="Turn on captions"></button><button aria-label="Turn on captions"></button>',
+  );
+  assert.deepEqual(captionControlLabels(doc), ['Turn on captions']);
+});
+
+test('no caption controls at all is an empty list, not a failure', () => {
+  assert.deepEqual(captionControlLabels(dom('<button aria-label="Chat"></button>')), []);
+});
+
+test('a keyboard hint in the label does not stop detection', () => {
+  assert.equal(captionsAreOn(dom('<button aria-label="Turn on captions (c)"></button>')), false);
 });
 
 // ---------- setCaptionsHidden ----------

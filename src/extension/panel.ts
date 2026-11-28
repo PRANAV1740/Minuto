@@ -219,6 +219,17 @@ function render(snapshot: SessionSnapshot): void {
       snapshot.captionsOn === true ? 'ok' : 'warn',
     ],
     ['on your screen', snapshot.settings.hideCaptions ? 'hidden' : 'visible'],
+    // Only worth the space when something went wrong; when captions are on,
+    // the controls found are not news.
+    ...(snapshot.captionsOn === true
+      ? []
+      : ([
+          [
+            'controls found',
+            snapshot.captionControls.length > 0 ? snapshot.captionControls.join(' · ') : 'none',
+            snapshot.captionControls.length > 0 ? undefined : 'warn',
+          ],
+        ] as [string, string, string?][])),
   ]);
 
   rows(readers, [

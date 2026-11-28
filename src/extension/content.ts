@@ -25,7 +25,12 @@ import {
   readCaptions,
   findActiveSpeaker,
 } from './meet-dom.ts';
-import { captionsAreOn, findCaptionsToggle, setCaptionsHidden } from './captions-view.ts';
+import {
+  captionControlLabels,
+  captionsAreOn,
+  findCaptionsToggle,
+  setCaptionsHidden,
+} from './captions-view.ts';
 import { DEFAULT_SETTINGS, loadSettings, onSettingsChange, type Settings } from './settings.ts';
 import { meetCodeFrom, type SessionSnapshot, type ToBackground } from './messages.ts';
 import type { SpeakerSample } from '../fusion/fuse.ts';
@@ -65,6 +70,7 @@ function snapshot(): SessionSnapshot {
     elapsedMs: elapsed(),
     report: diagnose(document),
     captionsOn: captionsAreOn(document),
+    captionControls: captionControlLabels(document),
     settings,
     capture: captureReport(document),
     captionLines: tracker.lines(),

@@ -112,6 +112,31 @@ async function loadModel(): Promise<void> {
     // expected.
     env.allowLocalModels = false;
 
+    // Measured in a real call, and the reason nothing transcribed:
+    //
+    //   no available backend found. ERR: [webgpu] TypeError: Failed to fetch
+    //   dynamically imported module: https://cdn.jsdelivr.net/npm/
+    //   onnxruntime-web@.../ort-wasm-simd-threaded.asyncify.mjs
+    //
+    // transformers.js imports onnxruntime's WASM runtime from jsDelivr at run
+    // time, and Manifest V3 refuses to load script from a remote origin —
+    // `script-src 'self'` is not a setting we can relax, it is the rule that
+    // makes extensions auditable. So the runtime ships inside the extension
+    // (build-extension.mjs) and ORT is pointed at it.
+    //
+    // A string path, not an object: an object switches on the library's own
+    // blob-caching path, which fetches the files itself and lands back in the
+    // same prohibition.
+    const onnx = env.backends.onnx as { wasm?: Record<string, unknown> };
+    if (onnx.wasm) {
+      onnx.wasm.wasmPaths = chrome.runtime.getURL('ort/');
+
+      // Threads need SharedArrayBuffer, which needs cross-origin isolation,
+      // which an extension page does not have. Asking for them produces a
+      // failure that reads like a missing file.
+      onnx.wasm.numThreads = 1;
+    }
+
     const transcriber = await pipeline('automatic-speech-recognition', status.tier.model, {
       dtype: status.tier.dtype,
       device: probe.hasWebGpu ? 'webgpu' : 'wasm',

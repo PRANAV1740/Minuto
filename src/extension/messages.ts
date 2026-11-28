@@ -17,6 +17,12 @@ export type SessionSnapshot = {
   report: DomReport | null;
   /** Whether Meet's captions are on; null when the control cannot be read. */
   captionsOn: boolean | null;
+  /**
+   * Labels of every caption-ish control found on the page. Interface wording
+   * only — it is what makes a detection failure diagnosable instead of a
+   * second round of guessing at Google's phrasing.
+   */
+  captionControls: string[];
   /** What the content script is currently acting on, so the panel agrees. */
   settings: Settings;
   /**
