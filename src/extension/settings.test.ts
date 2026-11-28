@@ -3,10 +3,12 @@ import assert from 'node:assert/strict';
 
 import { DEFAULT_SETTINGS, withDefaults } from './settings.ts';
 
-test('captions are switched on and hidden unless told otherwise', () => {
-  // The point of the feature: the user should never have to touch the CC
-  // button, and should never see the caption panel.
-  assert.deepEqual(DEFAULT_SETTINGS, { autoCaptions: true, hideCaptions: true });
+test('Meet captions are left alone unless the user asks for them', () => {
+  // Minuto transcribes the call's audio; captions only ever added speaker
+  // names, and in a real call they were too inaccurate on Hinglish to be
+  // worth switching on. Reaching into someone's meeting to enable a feature
+  // they did not ask for is wrong even when it is local to them.
+  assert.deepEqual(DEFAULT_SETTINGS, { autoCaptions: false, hideCaptions: true });
 });
 
 test('nothing stored yet gives the defaults', () => {
@@ -24,8 +26,13 @@ test('a stored choice is kept', () => {
 
 test('one stored choice does not reset the other', () => {
   assert.deepEqual(withDefaults({ hideCaptions: false }), {
-    autoCaptions: true,
+    autoCaptions: false,
     hideCaptions: false,
+  });
+
+  assert.deepEqual(withDefaults({ autoCaptions: true }), {
+    autoCaptions: true,
+    hideCaptions: true,
   });
 });
 

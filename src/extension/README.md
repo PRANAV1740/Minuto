@@ -363,3 +363,35 @@ nothing, and a second press would switch captions back off.
 The event is synthetic, so `isTrusted` is false and a handler that checks it
 will ignore it. The panel therefore still tells the user they can press the
 key themselves, and now also says why the control is missing.
+
+## Round ten: captions are out, and the audio never flowed
+
+Two findings from a real call, and the first changes the design.
+
+**Meet's captions are not worth switching on.** Tried on Hinglish, they were
+too inaccurate to serve even as the speaker channel, which was the only job
+they had. Auto-enable now defaults to **off** and nothing presses `c`.
+Reaching into someone's meeting to turn on a feature they do not want is
+wrong even when the feature is local to them. Minuto transcribes the call's
+audio itself; captions are an optional extra that adds speaker names, for
+anyone who finds them accurate enough to want.
+
+**Whisper produced nothing, and the audio graph is why.** Two faults, each
+sufficient on its own, both showing as `audio 0:00` and `windows 0`:
+
+1. The AudioWorkletNode was never connected to the destination. A node with
+   nothing on its output is not part of the rendered graph and `process()` is
+   simply never called. It now runs through a zero-gain node to the
+   destination, which adds nothing to what the user hears.
+2. The AudioContext was never resumed. One created without a user gesture
+   starts suspended and renders nothing, and an offscreen document has no
+   gesture to offer.
+
+The context's state is now reported in the panel, live rather than cached,
+because the browser can suspend a context on its own.
+
+**Next, and the thing that makes captions genuinely unnecessary:** the
+microphone and the tab are separate streams, which is a free two-way speaker
+split — the mic is this user, the tab is everyone else. Running VAD on each
+produces the same `SpeakerSample[]` the fusion layer already consumes, with
+no captions and no diarisation vendor.

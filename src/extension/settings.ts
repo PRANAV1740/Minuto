@@ -2,20 +2,35 @@
  * The handful of choices the user gets, kept in `chrome.storage.local` so the
  * content script and the side panel agree without passing messages about it.
  *
- * Both default to on, which is the whole feature: captions get switched on
- * because Minuto needs them, and hidden because nobody wants a band of
- * subtitles across their call for an hour.
+ * Auto-enabling captions defaults to **off**.
+ *
+ * It was on, on the reasoning that Minuto needs captions for speaker names.
+ * Tried in a real call, Meet's captions turned out to be too inaccurate on
+ * Hinglish to be worth switching on at all — and a tool that reaches into
+ * someone's meeting to turn on a feature they do not want is wrong even when
+ * the feature is local to them. Minuto transcribes the call's audio itself;
+ * captions are now an optional extra that only adds speaker names.
+ *
+ * Hiding stays on, because it costs nothing and only acts when a caption
+ * region exists — which, with auto-enable off, is only when the user has
+ * switched captions on themselves.
  */
 
 export type Settings = {
-  /** Switch Meet's captions on by itself when they are off. */
+  /**
+   * Switch Meet's captions on by itself when they are off.
+   *
+   * Off by default. Minuto does not need captions — it transcribes the audio
+   * — and they only add speaker names, at the cost of a feature the user did
+   * not ask for being switched on in their meeting.
+   */
   autoCaptions: boolean;
   /** Keep the caption panel out of view while it keeps updating. */
   hideCaptions: boolean;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
-  autoCaptions: true,
+  autoCaptions: false,
   hideCaptions: true,
 };
 

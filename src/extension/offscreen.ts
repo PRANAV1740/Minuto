@@ -44,6 +44,8 @@ type Status = {
   captureError: string | null;
   modelError: string | null;
   micEnabled: boolean;
+  /** The AudioContext's own state, which is the first thing to check. */
+  audioState: string | null;
   audioMs: number;
   windowsSeen: number;
   windowsSkipped: number;
@@ -58,6 +60,7 @@ const status: Status = {
   captureError: null,
   modelError: null,
   micEnabled: false,
+  audioState: null,
   audioMs: 0,
   windowsSeen: 0,
   windowsSkipped: 0,
@@ -249,6 +252,26 @@ async function startCapture(streamId: string): Promise<void> {
 
     context.createMediaStreamSource(tab).connect(node);
 
+    // The worklet has to reach the destination or Chrome never pulls it: a
+    // node with nothing connected to its output is not part of the rendered
+    // graph, and `process()` is simply not called. Through a silent gain, so
+    // this adds nothing to what the user hears — the meeting's own audio
+    // comes back through the <audio> element above, and routing it here too
+    // would double it.
+    const silence = context.createGain();
+    silence.gain.value = 0;
+    node.connect(silence).connect(context.destination);
+
+    // An AudioContext created without a user gesture starts suspended, and a
+    // suspended context renders nothing at all. There is no gesture to be had
+    // in an offscreen document, so it has to be resumed explicitly.
+    if (context.state === 'suspended') await context.resume();
+    status.audioState = context.state;
+
+    if (context.state !== 'running') {
+      status.captureError = `audio context is ${context.state} — no samples will arrive`;
+    }
+
     // Your own voice is not in the tab's output, so the microphone is a second
     // source. Optional: a refused permission must not stop the rest.
     try {
@@ -285,6 +308,7 @@ async function stopCapture(): Promise<void> {
 
   windower = createStreamWindower({ windowSec: WINDOW_SEC, overlapSec: OVERLAP_SEC, sampleRate: SAMPLE_RATE });
   status.capturing = false;
+  status.audioState = null;
 }
 
 // --------------------------------------------------------------- messaging
@@ -306,6 +330,9 @@ chrome.runtime.onMessage.addListener((message: Command, _sender, respond) => {
   }
 
   if (message.kind === 'capture-status') {
+    // Read live rather than from the last write: the browser can suspend a
+    // context on its own, and a stale "running" would hide it.
+    status.audioState = context?.state ?? null;
     respond({ status, words: words.length });
     return false;
   }

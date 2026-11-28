@@ -75,6 +75,7 @@ type CaptureState = {
   modelError: string | null;
   captureError: string | null;
   micEnabled: boolean;
+  audioState: string | null;
   audioMs: number;
   windowsSeen: number;
   windowsSkipped: number;
@@ -129,6 +130,11 @@ function renderCapture(state: CaptureState | null): void {
     ['model', state.modelReady ? 'ready' : state.modelError ? 'failed' : 'loading…',
       state.modelReady ? 'ok' : state.modelError ? 'warn' : undefined],
     ['microphone', state.micEnabled ? 'on' : 'off'],
+    [
+      'audio context',
+      state.audioState ?? 'not started',
+      state.audioState === 'running' ? 'ok' : state.audioState ? 'warn' : undefined,
+    ],
     ['audio', clock(state.audioMs)],
     ['windows', `${state.windowsSeen} (${state.windowsSkipped} silent)`],
     ['words', String(state.words)],
@@ -254,22 +260,17 @@ function renderEmpty(onMeet: boolean): void {
  * panel: one is the user's move, one is everyone else's, and one is ours.
  */
 function emptyCaptionsMessage(snapshot: SessionSnapshot): string {
-  if (snapshot.report?.settingsOpen) {
-    return 'Meet’s Captions and translation panel is open — switch captions on in it.';
-  }
-  if (snapshot.captionsOn === false) {
-    return 'Captions are off in Meet. Press c, or the CC button, to switch them on.';
-  }
   if (snapshot.report?.waitingForSpeech) {
     return 'Captions are on and empty — nothing has been said yet.';
   }
-  if (snapshot.captionsOn === null) {
-    return (
-      'Cannot find Meet’s captions control — the window may be too narrow for it. ' +
-      'Minuto has pressed c once; if captions are still off, click the Meet video and press c.'
-    );
+  if (snapshot.captionsOn === true) {
+    return 'Nothing read yet — captions appear a moment after somebody speaks.';
   }
-  return 'Nothing read yet — captions appear a moment after somebody speaks.';
+
+  // Not an instruction any more. Minuto transcribes the call's audio itself;
+  // Meet's captions are an optional extra that adds speaker names, and on
+  // Hinglish they were too inaccurate to be worth switching on.
+  return 'Meet captions are off. Minuto transcribes the call audio instead — captions only add speaker names.';
 }
 
 function render(snapshot: SessionSnapshot): void {
