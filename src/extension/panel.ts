@@ -184,17 +184,40 @@ const clock = (ms: number): string => {
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 };
 
-function renderEmpty(): void {
+/**
+ * Two different nothings.
+ *
+ * Not being in a call and being in a call Minuto cannot see look identical
+ * from here, and the second is what every open tab becomes when the extension
+ * is reloaded. Saying which one it is turns a mystery into one keystroke.
+ */
+function renderEmpty(onMeet: boolean): void {
   latestCapture = null;
   copyButton.disabled = true;
-  rows(session, [['status', 'no Meet tab active', 'warn']]);
-  rows(captionStatus, [['captions in Meet', 'no call open']]);
+
+  rows(session, [
+    ['status', onMeet ? 'Meet tab found, not reporting' : 'no Meet tab active', 'warn'],
+  ]);
+  rows(captionStatus, [['captions in Meet', onMeet ? 'not reporting' : 'no call open']]);
   readers.replaceChildren();
-  problems.replaceChildren();
+
+  if (onMeet) {
+    const list = document.createElement('ul');
+    list.className = 'warn';
+    const item = document.createElement('li');
+    item.textContent =
+      'Minuto is not running in this tab. Reload the Meet tab (F5) — Chrome drops ' +
+      'content scripts from tabs that were already open when the extension was reloaded.';
+    list.replaceChildren(item);
+    problems.replaceChildren(list);
+  } else {
+    problems.replaceChildren();
+  }
+
   captions.replaceChildren(
     Object.assign(document.createElement('div'), {
       className: 'empty',
-      textContent: 'Open a Google Meet call to begin.',
+      textContent: onMeet ? 'Nothing read — reload the Meet tab.' : 'Open a Google Meet call to begin.',
     }),
   );
 }
@@ -294,9 +317,9 @@ async function poll(): Promise<void> {
   try {
     const reply = (await chrome.runtime.sendMessage({ kind: 'panel-state' })) as ToPanel | undefined;
     if (reply?.snapshot) render(reply.snapshot);
-    else renderEmpty();
+    else renderEmpty(reply?.onMeet === true);
   } catch {
-    renderEmpty();
+    renderEmpty(false);
   }
 }
 

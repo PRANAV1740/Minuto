@@ -43,10 +43,44 @@ export type ToBackground =
 export type ToPanel = {
   kind: 'state';
   snapshot: SessionSnapshot | null;
+  /**
+   * Whether the tab the panel is looking at is a Meet page at all.
+   *
+   * This is what tells "you are not in a call" apart from "you are in a call
+   * but Minuto is not running in it" — the second being what happens to every
+   * open tab when the extension is reloaded, and indistinguishable from the
+   * first without this.
+   */
+  onMeet: boolean;
 };
 
-/** Pulls the Meet code (abc-defg-hij) out of a Meet URL. */
+/** Pulls the Meet code (abc-defg-hij) out of a Meet URL path. */
 export function meetCodeFrom(pathname: string): string | null {
   const match = /^\/([a-z]{3}-[a-z]{4}-[a-z]{3})\b/i.exec(pathname);
   return match ? match[1]!.toLowerCase() : null;
+}
+
+/**
+ * Whether a tab URL is Google Meet.
+ *
+ * Parsed rather than matched as text: `meet.google.com.example.com` contains
+ * the host name and is not it.
+ */
+export function isMeetUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  try {
+    return new URL(url).hostname === 'meet.google.com';
+  } catch {
+    return false;
+  }
+}
+
+/** The call code from a full tab URL, or null if it is not a Meet call. */
+export function meetCodeFromUrl(url: string | undefined): string | null {
+  if (!isMeetUrl(url)) return null;
+  try {
+    return meetCodeFrom(new URL(url!).pathname);
+  } catch {
+    return null;
+  }
 }

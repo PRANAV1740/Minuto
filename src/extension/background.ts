@@ -7,9 +7,48 @@
  * that belongs in storage or in the page, not here.
  */
 
+import { isMeetUrl } from './messages.ts';
 import type { SessionSnapshot, ToBackground, ToPanel } from './messages.ts';
 
 const snapshots = new Map<number, SessionSnapshot>();
+
+const MEET_TABS = { url: 'https://meet.google.com/*' } as const;
+
+/**
+ * Puts the content script back into Meet tabs that are already open.
+ *
+ * Chrome injects content scripts when a page loads, and reloading the
+ * extension orphans every one already running — the tab keeps its call, the
+ * script stops reporting, and the panel says "no Meet tab active" while the
+ * user is plainly looking at a meeting. Measured: exactly that, in a real
+ * call, after reloading at chrome://extensions.
+ *
+ * Re-injecting on install and on startup means a reload costs nothing. The
+ * content script guards against running twice, so a tab that already has a
+ * live script is left alone.
+ */
+async function injectIntoOpenMeetTabs(): Promise<void> {
+  try {
+    const tabs = await chrome.tabs.query(MEET_TABS);
+
+    await Promise.all(
+      tabs.map(async (tab) => {
+        if (tab.id === undefined) return;
+        try {
+          await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
+        } catch {
+          // A tab mid-navigation, or one Chrome will not let us touch. The
+          // next page load injects it the ordinary way.
+        }
+      }),
+    );
+  } catch {
+    // No tabs permission, or the query failed; nothing to recover.
+  }
+}
+
+chrome.runtime.onInstalled.addListener(() => void injectIntoOpenMeetTabs());
+chrome.runtime.onStartup.addListener(() => void injectIntoOpenMeetTabs());
 
 /**
  * The offscreen document is created on demand and kept, because it holds the
@@ -63,10 +102,11 @@ chrome.runtime.onMessage.addListener(
       chrome.tabs
         .query({ active: true, currentWindow: true })
         .then((tabs) => {
-          const tabId = tabs[0]?.id;
-          respond({ kind: 'state', snapshot: tabId === undefined ? null : snapshots.get(tabId) ?? null });
+          const tab = tabs[0];
+          const snapshot = tab?.id === undefined ? null : snapshots.get(tab.id) ?? null;
+          respond({ kind: 'state', snapshot, onMeet: isMeetUrl(tab?.url) });
         })
-        .catch(() => respond({ kind: 'state', snapshot: null }));
+        .catch(() => respond({ kind: 'state', snapshot: null, onMeet: false }));
       return true;
     }
 

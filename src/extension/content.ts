@@ -155,37 +155,58 @@ function sampleSpeaker(): void {
   if (speaker) speakerSamples.push({ atMs: elapsed(), speaker });
 }
 
-// Alt+S marks a moment worth keeping. One keystroke is something to do while
-// listening, and it gives the summariser a strong prior later.
-addEventListener('keydown', (event) => {
-  if (event.altKey && event.code === 'KeyS') {
-    starsMs.push(elapsed());
-    console.info(`[Minuto] starred at ${Math.round(elapsed() / 1000)}s`);
-  }
-});
+function start(): void {
+  // Alt+S marks a moment worth keeping. One keystroke is something to do
+  // while listening, and it gives the summariser a strong prior later.
+  addEventListener('keydown', (event) => {
+    if (event.altKey && event.code === 'KeyS') {
+      starsMs.push(elapsed());
+      console.info(`[Minuto] starred at ${Math.round(elapsed() / 1000)}s`);
+    }
+  });
 
-// Applied before anything is awaited, so the caption panel never flashes up
-// while the stored settings are being read.
-setCaptionsHidden(document, DEFAULT_SETTINGS.hideCaptions);
+  // Applied before anything is awaited, so the caption panel never flashes up
+  // while the stored settings are being read.
+  setCaptionsHidden(document, DEFAULT_SETTINGS.hideCaptions);
 
-void loadSettings().then((loaded) => {
-  settings = loaded;
+  void loadSettings().then((loaded) => {
+    settings = loaded;
+    manageCaptions();
+  });
+
+  onSettingsChange((next) => {
+    settings = next;
+    manageCaptions();
+  });
+
+  refreshRoster();
+  attachObserver();
   manageCaptions();
-});
 
-onSettingsChange((next) => {
-  settings = next;
-  manageCaptions();
-});
+  setInterval(refreshRoster, ROSTER_REFRESH_MS);
+  setInterval(attachObserver, ROSTER_REFRESH_MS);
+  setInterval(sampleSpeaker, SPEAKER_SAMPLE_MS);
+  setInterval(manageCaptions, CAPTION_CHECK_MS);
+  setInterval(() => send({ kind: 'snapshot', snapshot: snapshot() }), REPORT_MS);
 
-refreshRoster();
-attachObserver();
-manageCaptions();
+  console.info('[Minuto] content script ready —', diagnose(document));
+}
 
-setInterval(refreshRoster, ROSTER_REFRESH_MS);
-setInterval(attachObserver, ROSTER_REFRESH_MS);
-setInterval(sampleSpeaker, SPEAKER_SAMPLE_MS);
-setInterval(manageCaptions, CAPTION_CHECK_MS);
-setInterval(() => send({ kind: 'snapshot', snapshot: snapshot() }), REPORT_MS);
+/**
+ * Runs once per tab, however many times the file is injected.
+ *
+ * The service worker re-injects into tabs that were already open when the
+ * extension was reloaded, and it cannot tell which of them still has a live
+ * script. Without this flag those tabs would end up with two of every timer,
+ * two observers and two snapshots a second — all subtly wrong rather than
+ * obviously broken.
+ */
+const ALREADY_RUNNING = '__minutoContentScript';
+const scope = globalThis as Record<string, unknown>;
 
-console.info('[Minuto] content script ready —', diagnose(document));
+if (scope[ALREADY_RUNNING]) {
+  console.info('[Minuto] already running in this tab');
+} else {
+  scope[ALREADY_RUNNING] = true;
+  start();
+}

@@ -225,3 +225,19 @@ not yet confirmed in Chrome.
 **Still unknown:** everything needing a second participant. One person in the
 call means no speaker attribution, no active-speaker signal, and no caption
 collapsing to observe.
+
+## Round four: the model loads
+
+`model: ready`. Bundling onnxruntime inside the extension fixed it — the first
+time Whisper has ever loaded in Chrome. Tier B on the integrated adapter, so
+Chrome still needs setting to High performance in Windows Graphics Settings to
+reach the discrete GPU.
+
+The panel said `no Meet tab active` while a call was plainly open, because
+reloading the extension orphans the content script in every tab already open.
+The tab keeps its meeting, the script stops reporting, and the two look
+identical from the panel. Fixed twice over: the worker re-injects into open
+Meet tabs on install and startup (`scripting` permission), and the panel now
+distinguishes "no Meet tab" from "Meet tab found, not reporting" and says to
+reload the tab. The content script sets a flag on `globalThis` so a tab that
+already has a live script is not given a second set of timers.
