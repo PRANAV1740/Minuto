@@ -356,9 +356,66 @@ test('a missing roster is called out as a problem', () => {
   assert.ok(diagnose(doc).problems.some((p) => /roster|participant/i.test(p)));
 });
 
-test('a caption container that reads nothing is called out as a problem', () => {
+test('a caption container holding text we cannot read is a problem', () => {
   const doc = dom(`
     <div data-participant-id="a" aria-label="Pranav K"></div>
     <div aria-label="Captions"><div>unparseable</div></div>`);
-  assert.ok(diagnose(doc).problems.some((p) => /no captions/i.test(p)));
+  const report = diagnose(doc);
+  assert.ok(report.problems.some((p) => /could not be read/i.test(p)));
+  assert.equal(report.waitingForSpeech, false);
+});
+
+test('an empty caption container is waiting, not broken', () => {
+  // Measured in a real call: captions on, nobody speaking, and the region
+  // holding only its placeholder and the jump-to-latest button. Calling that
+  // a problem cost a whole meeting spent looking for a parsing fault.
+  const doc = dom(`
+    <div data-participant-id="a" aria-label="Pranav K"></div>
+    <div role="region" aria-label="Captions">
+      <div><div></div></div>
+      <div><div data-is-touch-wrapper="true">
+        <button aria-label="Jump to most recent captions">
+          <span aria-hidden="true">arrow_downward</span>
+        </button>
+      </div></div>
+    </div>`);
+
+  const report = diagnose(doc);
+  assert.equal(report.captionRootStrategy, 'aria-label');
+  assert.equal(report.captionsRead, 0);
+  assert.equal(report.waitingForSpeech, true);
+  assert.deepEqual(report.problems, []);
+});
+
+test('captions nested below the region are still read', () => {
+  // readCaptions used to take the region's direct children as the entries.
+  // That held in one capture and is not a promise Google has made.
+  const doc = dom(`
+    <div data-participant-id="a" aria-label="Pranav K"></div>
+    <div role="region" aria-label="Captions">
+      <div><div>
+        <div><div><span>Pranav K</span></div><div>we ship on Friday</div></div>
+      </div></div>
+    </div>`);
+
+  assert.deepEqual(readCaptions(doc, ['Pranav K']), [
+    { speaker: 'Pranav K', text: 'we ship on Friday' },
+  ]);
+});
+
+test('a wrapper holding several entries does not collapse into one', () => {
+  // The failure this guards against reads like bad fusion — one speaker
+  // credited with everyone's words — rather than like bad DOM reading.
+  const doc = dom(`
+    <div role="region" aria-label="Captions">
+      <div>
+        <div><div><span>Pranav K</span></div><div>we ship on Friday</div></div>
+        <div><div><span>Asha R</span></div><div>I will do the deck</div></div>
+      </div>
+    </div>`);
+
+  assert.deepEqual(readCaptions(doc, ['Pranav K', 'Asha R']), [
+    { speaker: 'Pranav K', text: 'we ship on Friday' },
+    { speaker: 'Asha R', text: 'I will do the deck' },
+  ]);
 });

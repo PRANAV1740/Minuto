@@ -222,6 +222,25 @@ function renderEmpty(onMeet: boolean): void {
   );
 }
 
+/**
+ * Why there are no captions on screen, in the user's terms.
+ *
+ * Three different nothings, and the difference is the whole value of the
+ * panel: one is the user's move, one is everyone else's, and one is ours.
+ */
+function emptyCaptionsMessage(snapshot: SessionSnapshot): string {
+  if (snapshot.captionsOn === false) {
+    return 'Captions are off in Meet. Press c, or the CC button, to switch them on.';
+  }
+  if (snapshot.report?.waitingForSpeech) {
+    return 'Captions are on and empty — nothing has been said yet.';
+  }
+  if (snapshot.captionsOn === null) {
+    return 'Cannot find Meet’s captions control. Press c to switch captions on.';
+  }
+  return 'Nothing read yet — captions appear a moment after somebody speaks.';
+}
+
 function render(snapshot: SessionSnapshot): void {
   const report = snapshot.report;
 
@@ -259,7 +278,10 @@ function render(snapshot: SessionSnapshot): void {
     ['captions', report?.captionRootStrategy ?? 'not found', report?.captionRootStrategy ? 'ok' : 'warn'],
     ['roster', report?.rosterStrategy ?? 'not found', report?.rosterStrategy ? 'ok' : 'warn'],
     ['people', String(report?.rosterCount ?? 0)],
-    ['lines on screen', String(report?.captionsRead ?? 0)],
+    [
+      'lines on screen',
+      report?.waitingForSpeech ? '0 — waiting for speech' : String(report?.captionsRead ?? 0),
+    ],
     ['speaking now', report?.activeSpeaker ?? '—'],
     ['speaker samples', String(snapshot.speakerSamples.length)],
   ]);
@@ -286,10 +308,7 @@ function render(snapshot: SessionSnapshot): void {
     captions.replaceChildren(
       Object.assign(document.createElement('div'), {
         className: 'empty',
-        textContent:
-          snapshot.captionsOn === false
-            ? 'Captions are off in Meet. Minuto will switch them on; or press the CC button.'
-            : 'Nothing read yet — captions appear once somebody speaks.',
+        textContent: emptyCaptionsMessage(snapshot),
       }),
     );
     return;

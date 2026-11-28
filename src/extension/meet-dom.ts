@@ -44,6 +44,13 @@ export type DomReport = {
   rosterCount: number;
   captionsRead: number;
   activeSpeaker: string | null;
+  /**
+   * The caption region exists and holds nothing — captions are on and nobody
+   * has spoken yet. Normal, and deliberately not a problem: reporting it as
+   * one cost a whole call spent looking for a parsing fault that was not
+   * there.
+   */
+  waitingForSpeech: boolean;
   problems: string[];
 };
 
@@ -234,13 +241,51 @@ export function parseCaptionEntry(
   return { speaker, text };
 }
 
+/**
+ * Entries, wherever Meet has nested them.
+ *
+ * Not `root.children`: that assumed each entry is a direct child of the
+ * region, which was true in one capture and is not a promise. The walk is
+ * post-order and an element counts as an entry only when nothing inside it
+ * did — otherwise a wrapper holding three entries parses as a single entry
+ * whose text is all three run together, attributed to whoever spoke first.
+ * That failure would read like bad fusion rather than bad DOM reading.
+ */
+export function readEntriesFrom(root: Element, roster: readonly string[]): CaptionEntry[] {
+  const found: CaptionEntry[] = [];
+
+  const walk = (element: Element): boolean => {
+    let deeper = false;
+
+    for (const child of element.children) {
+      if (isInterface(child)) continue;
+      if (walk(child)) deeper = true;
+    }
+
+    if (deeper) return true;
+
+    const entry = parseCaptionEntry(element, roster);
+    if (!entry) return false;
+
+    found.push(entry);
+    return true;
+  };
+
+  for (const child of root.children) {
+    if (!isInterface(child)) walk(child);
+  }
+
+  return found;
+}
+
 export function readCaptions(doc: Document, roster: readonly string[]): CaptionEntry[] {
   const root = findCaptionRoot(doc);
-  if (!root) return [];
+  return root ? readEntriesFrom(root.element, roster) : [];
+}
 
-  return [...root.element.children]
-    .map((child) => parseCaptionEntry(child, roster))
-    .filter((entry): entry is CaptionEntry => entry !== null);
+/** Whether the caption region holds any speech at all, controls aside. */
+export function captionRootIsEmpty(root: Element): boolean {
+  return textPieces(root).join('').trim() === '';
 }
 
 // ------------------------------------------------------------ active speaker
@@ -292,6 +337,8 @@ export function diagnose(doc: Document): DomReport {
   const names = roster?.names ?? [];
   const captions = readCaptions(doc, names);
 
+  const empty = captionRoot ? captionRootIsEmpty(captionRoot.element) : false;
+
   const problems: string[] = [];
   if (!captionRoot) {
     problems.push('no caption container found — are captions switched on?');
@@ -299,8 +346,11 @@ export function diagnose(doc: Document): DomReport {
   if (!roster) {
     problems.push('no participant roster found — speaker names will be unavailable');
   }
-  if (captionRoot && captions.length === 0) {
-    problems.push('caption container found but no captions could be read from it');
+  // An empty box is what captions look like before anybody speaks, and saying
+  // otherwise is worse than saying nothing: it sends you looking for a
+  // parsing fault instead of asking someone to talk.
+  if (captionRoot && captions.length === 0 && !empty) {
+    problems.push('caption container has text in it that could not be read as captions');
   }
 
   return {
@@ -309,6 +359,7 @@ export function diagnose(doc: Document): DomReport {
     rosterCount: names.length,
     captionsRead: captions.length,
     activeSpeaker: findActiveSpeaker(doc, names),
+    waitingForSpeech: captionRoot !== null && empty,
     problems,
   };
 }

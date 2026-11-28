@@ -241,3 +241,33 @@ Meet tabs on install and startup (`scripting` permission), and the panel now
 distinguishes "no Meet tab" from "Meet tab found, not reporting" and says to
 reload the tab. The content script sets a flag on `globalThis` so a tab that
 already has a live script is not given a second set of timers.
+
+## Round five: the problem that was not one
+
+A capture taken in a call, captions on:
+
+    "captionRootStrategy": "aria-label",
+    "captionsRead": 0,
+    "problems": ["caption container found but no captions could be read from it"]
+
+The region was found correctly and held exactly two things: an empty
+placeholder `div > div`, and the jump-to-latest button. In other words
+captions were on and **nobody had spoken yet** — the normal state of a quiet
+call, reported as a fault. That message sent two of us looking for a parsing
+bug that did not exist.
+
+`diagnose` now distinguishes an empty region (`waitingForSpeech`, not a
+problem) from one holding text it could not read (a real problem), and the
+panel says which. The capture also now carries `captionsOn` and
+`captionControls`, so the next capture answers the question that cost two
+calls: what, exactly, is the CC control called.
+
+`readCaptions` no longer assumes entries are direct children of the region.
+They were in one capture, which is not a promise. The walk is post-order and
+an element counts as an entry only when nothing inside it did — otherwise a
+wrapper holding three entries parses as one entry with everyone's words
+attributed to whoever spoke first, which would read like a fusion bug rather
+than a DOM one.
+
+Still unconfirmed, and now the only thing left to confirm: a call with two
+people actually speaking.

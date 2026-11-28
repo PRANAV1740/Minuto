@@ -24,6 +24,7 @@
  */
 
 import { diagnose, findCaptionRoot, type DomReport } from './meet-dom.ts';
+import { captionControlLabels, captionsAreOn } from './captions-view.ts';
 
 export type Outline = {
   tag: string;
@@ -43,6 +44,16 @@ export type CaptureReport = {
   url: string;
   selectorCounts: Record<string, number>;
   diagnosis: DomReport;
+  /**
+   * Whether Meet's captions are on, and the labels of every control that
+   * mentions captions.
+   *
+   * Interface wording, never anything anyone said — and the one thing a
+   * capture could not previously answer. Two calls were spent guessing at
+   * Google's phrasing for the CC button; this makes the next one a lookup.
+   */
+  captionsOn: boolean | null;
+  captionControls: string[];
   captionOutline: Outline | null;
   tileOutline: Outline | null;
 };
@@ -175,6 +186,8 @@ export function captureReport(doc: Document): CaptureReport {
       // The diagnosis names whoever is speaking; the name itself is not needed.
       activeSpeaker: report.activeSpeaker === null ? null : '«redacted»',
     },
+    captionsOn: captionsAreOn(doc),
+    captionControls: captionControlLabels(doc),
     captionOutline: captionRoot ? outline(captionRoot.element, { maxDepth: 5 }) : null,
     tileOutline: tile ? outline(tile, { maxDepth: 3 }) : null,
   };
