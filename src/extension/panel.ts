@@ -64,6 +64,13 @@ void loadSettings().then(showSettings);
 type CaptureState = {
   capturing: boolean;
   tier: { tier: string; label: string; model: string; reason: string; warning?: string } | null;
+  adapter: {
+    vendor?: string;
+    architecture?: string;
+    device?: string;
+    description?: string;
+    renderer?: string;
+  } | null;
   modelReady: boolean;
   modelError: string | null;
   captureError: string | null;
@@ -87,6 +94,20 @@ captureButton.addEventListener('click', () => {
     });
 });
 
+/** The GPU in words a person can check against chrome://gpu. */
+function describeAdapter(adapter: CaptureState['adapter']): string {
+  if (!adapter) return 'not reported';
+
+  // The renderer string carries the board name; the rest is all Chrome will
+  // say once it has masked the adapter for privacy.
+  if (adapter.renderer) return adapter.renderer;
+
+  const parts = [adapter.vendor, adapter.architecture, adapter.device, adapter.description]
+    .filter((part): part is string => typeof part === 'string' && part.trim() !== '');
+
+  return parts.length > 0 ? parts.join(' · ') : 'masked by Chrome';
+}
+
 function renderCapture(state: CaptureState | null): void {
   if (!state) {
     captureButton.textContent = 'Start capture';
@@ -101,6 +122,10 @@ function renderCapture(state: CaptureState | null): void {
   rows(captureStatus, [
     ['tier', state.tier ? `${state.tier.tier} · ${state.tier.label}` : 'deciding…'],
     ['why', state.tier?.reason ?? '—'],
+    // Shown always, not only on failure: "adapter looks like integrated
+    // graphics" is a conclusion, and a conclusion with no evidence under it
+    // cannot be argued with when it is wrong.
+    ['gpu', describeAdapter(state.adapter)],
     ['model', state.modelReady ? 'ready' : state.modelError ? 'failed' : 'loading…',
       state.modelReady ? 'ok' : state.modelError ? 'warn' : undefined],
     ['microphone', state.micEnabled ? 'on' : 'off'],

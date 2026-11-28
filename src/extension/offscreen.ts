@@ -81,6 +81,35 @@ type GpuLike = {
   requestAdapter(options?: { powerPreference?: 'low-power' | 'high-performance' }): Promise<GpuAdapterLike | null>;
 };
 
+/**
+ * The GPU's real name, from WebGL rather than WebGPU.
+ *
+ * `GPUAdapter.info` is masked for privacy — on Chrome a correctly configured
+ * RTX laptop reports no more than "nvidia" and "ampere", and a misconfigured
+ * one reports "intel" and "gen-12lp". Neither tells a person what to do.
+ * `WEBGL_debug_renderer_info` gives the board name, which is both a better
+ * signal for the tier and something the panel can show.
+ */
+function probeRenderer(): string | null {
+  try {
+    const canvas = document.createElement('canvas');
+    const gl = (canvas.getContext('webgl2', { powerPreference: 'high-performance' }) ??
+      canvas.getContext('webgl', { powerPreference: 'high-performance' })) as
+      | WebGLRenderingContext
+      | null;
+    if (!gl) return null;
+
+    const debug = gl.getExtension('WEBGL_debug_renderer_info');
+    const value = debug
+      ? gl.getParameter(debug.UNMASKED_RENDERER_WEBGL)
+      : gl.getParameter(gl.RENDERER);
+
+    return typeof value === 'string' && value.trim() !== '' ? value : null;
+  } catch {
+    return null;
+  }
+}
+
 /** What WebGPU reports about the GPU it gave us, if it gave us one. */
 async function probeAdapter(): Promise<{ hasWebGpu: boolean; adapter: AdapterInfo | null }> {
   const gpu = (navigator as Navigator & { gpu?: GpuLike }).gpu;
@@ -100,8 +129,10 @@ async function probeAdapter(): Promise<{ hasWebGpu: boolean; adapter: AdapterInf
 
 async function loadModel(): Promise<void> {
   const probe = await probeAdapter();
-  status.adapter = probe.adapter;
-  status.tier = chooseTier({ hasWebGpu: probe.hasWebGpu, adapter: probe.adapter });
+  const renderer = probeRenderer();
+  status.adapter =
+    probe.adapter || renderer ? { ...(probe.adapter ?? {}), ...(renderer ? { renderer } : {}) } : null;
+  status.tier = chooseTier({ hasWebGpu: probe.hasWebGpu, adapter: status.adapter });
 
   console.info('[Minuto] tier', status.tier, 'adapter', probe.adapter);
 

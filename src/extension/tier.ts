@@ -18,6 +18,17 @@ export type AdapterInfo = {
   architecture?: string;
   device?: string;
   description?: string;
+  /**
+   * The WebGL renderer string, which is where the real board name lives.
+   *
+   * Chrome masks `GPUAdapter.info` for privacy: `device` and `description`
+   * come back empty unless a developer flag is set, so a correctly
+   * configured RTX laptop reports nothing more than "nvidia" and "ampere".
+   * `WEBGL_debug_renderer_info` is not masked the same way and gives
+   * "ANGLE (NVIDIA, NVIDIA GeForce RTX 3050 Laptop GPU …)" — which is both a
+   * better signal and something a person can read and act on.
+   */
+  renderer?: string;
 };
 
 export type TierName = 'A' | 'B' | 'C';
@@ -40,9 +51,18 @@ export type TierChoice = TierSpec & {
   warning?: string;
 };
 
+/**
+ * The advice this gives has to be followable.
+ *
+ * The first version said to set Chrome to High performance in Windows
+ * Graphics Settings, and the first person to try it found Chrome was not in
+ * the list — Windows only shows applications you have added. Advice that
+ * names a control the reader cannot find is worse than none.
+ */
 const WRONG_GPU_WARNING =
-  'Chrome may be using the integrated GPU. In Windows Graphics Settings, ' +
-  'set Chrome to High performance, then reload.';
+  'Chrome looks to be on the integrated GPU. In NVIDIA Control Panel → Manage 3D settings → ' +
+  'Program Settings, add chrome.exe and pick the high-performance processor. Then quit Chrome ' +
+  'completely — check the system tray — and reopen it.';
 
 /** Markers of a dedicated GPU, which beat the integrated markers below. */
 const DISCRETE = /geforce|\brtx\b|\bgtx\b|quadro|tesla|radeon\s*(rx|pro)|\barc\b/i;
@@ -50,12 +70,17 @@ const DISCRETE = /geforce|\brtx\b|\bgtx\b|quadro|tesla|radeon\s*(rx|pro)|\barc\b
 /** Markers of shared-memory graphics that are genuinely weak. */
 const INTEGRATED = /uhd|iris|hd graphics|integrated|\bvega\b|radeon\s*(\(tm\)\s*)?graphics|\bgen-|adreno|mali/i;
 
+/** Everything known about the adapter, as one searchable string. */
+export function adapterText(adapter: AdapterInfo): string {
+  return [adapter.vendor, adapter.architecture, adapter.device, adapter.description, adapter.renderer]
+    .filter((part): part is string => typeof part === 'string')
+    .join(' ');
+}
+
 export function looksIntegrated(adapter: AdapterInfo | null | undefined): boolean {
   if (!adapter) return false;
 
-  const text = [adapter.vendor, adapter.architecture, adapter.device, adapter.description]
-    .filter((part): part is string => typeof part === 'string')
-    .join(' ');
+  const text = adapterText(adapter);
 
   // Apple silicon shares memory with the CPU but is not a weak GPU, so the
   // shared-memory heuristic must not catch it.
@@ -66,10 +91,7 @@ export function looksIntegrated(adapter: AdapterInfo | null | undefined): boolea
 }
 
 function identifiable(adapter: AdapterInfo | null | undefined): boolean {
-  if (!adapter) return false;
-  return [adapter.vendor, adapter.architecture, adapter.device, adapter.description].some(
-    (part) => typeof part === 'string' && part.trim() !== '',
-  );
+  return adapter ? adapterText(adapter).trim() !== '' : false;
 }
 
 export function chooseTier(input: {

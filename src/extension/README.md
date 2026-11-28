@@ -322,3 +322,25 @@ something else. The tests now assert the rule contains no `aria-label` at all.
 Verified in a browser: region at `left: -20000px` and off screen, the dialog
 at opacity 1 and on screen, `elementFromPoint` over the switch returning the
 switch, and the click registering.
+
+## Round eight: a conclusion with no evidence under it
+
+`tier: B · balanced`, `why: adapter looks like integrated graphics`, and the
+advice "In Windows Graphics Settings, set Chrome to High performance". The
+first person to follow it found Chrome was not in that list — Windows only
+shows applications you have added. Advice naming a control the reader cannot
+find is worse than none, and after setting it another way the panel still
+said the same thing with no way to tell whether it was right.
+
+The panel showed a conclusion and hid the evidence. It now shows a `gpu` row
+always, not only on failure.
+
+The evidence needed improving too. Chrome masks `GPUAdapter.info`: a correctly
+configured RTX laptop reports no more than `nvidia` / `ampere`, and a
+misconfigured one `intel` / `gen-12lp`. Neither tells a person what to do, and
+`nvidia` was not among the dedicated-GPU markers, so a working machine would
+have been judged on the absence of integrated words rather than on anything
+positive. The offscreen document now also reads
+`WEBGL_debug_renderer_info`, which is not masked the same way and yields
+`ANGLE (NVIDIA, NVIDIA GeForce RTX 3050 Laptop GPU Direct3D11 …)` — a better
+signal for the tier, and a line the user can compare against chrome://gpu.
