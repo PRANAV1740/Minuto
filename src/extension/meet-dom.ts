@@ -51,6 +51,8 @@ export type DomReport = {
    * there.
    */
   waitingForSpeech: boolean;
+  /** Meet's "Captions and translation" panel is open, which means they are off. */
+  settingsOpen: boolean;
   problems: string[];
 };
 
@@ -61,16 +63,67 @@ const norm = (text: string): string => text.toLowerCase().replace(/\s+/gu, ' ').
 
 // ---------------------------------------------------------------- caption root
 
-export function findCaptionRoot(doc: Document): { element: Element; strategy: string } | null {
-  // Measured in a real call: four elements carry "caption" in their label —
-  // the transcript region, the CC toggle, a jump-to-latest control and a
-  // settings entry. Controls are excluded, and the one marked as a region
-  // wins, rather than trusting document order to put the right one first.
-  const labelled = [...doc.querySelectorAll('[aria-label]')].filter((element) => {
+/**
+ * Roles a transcript is never given.
+ *
+ * Measured in a real call: with captions off and the settings panel open, the
+ * only caption-labelled container on the page is
+ * `div[role="dialog"][aria-label="Captions and translation"]` — Meet's
+ * settings dialog. Choosing it looks like success and then reads buttons and
+ * tooltips for the whole meeting, which is a worse failure than finding
+ * nothing, because the diagnostic reports a strategy that "worked".
+ */
+const NOT_A_TRANSCRIPT_ROLE = new Set([
+  'dialog',
+  'alertdialog',
+  'menu',
+  'menubar',
+  'menuitem',
+  'tooltip',
+  'listbox',
+  'combobox',
+  'tab',
+  'tablist',
+  'navigation',
+  'button',
+]);
+
+/** Labels that describe somewhere captions are configured, not shown. */
+const CAPTION_SETTINGS_LABEL = /translat|setting|language|option|preference/i;
+
+/** Whether a caption-labelled element is a settings surface rather than the transcript. */
+function isCaptionSettings(element: Element): boolean {
+  const role = element.getAttribute('role') ?? '';
+  if (NOT_A_TRANSCRIPT_ROLE.has(role)) return true;
+  return CAPTION_SETTINGS_LABEL.test(element.getAttribute('aria-label') ?? '');
+}
+
+/** Caption-labelled containers, controls aside — both the good and the bad. */
+function captionLabelled(doc: Document): Element[] {
+  return [...doc.querySelectorAll('[aria-label]')].filter((element) => {
     const tag = element.tagName.toLowerCase();
     if (tag === 'button' || tag === 'a' || element.getAttribute('role') === 'button') return false;
     return /caption|subtitle/i.test(element.getAttribute('aria-label') ?? '');
   });
+}
+
+/**
+ * Whether Meet's captions settings panel is the only caption-ish thing here.
+ *
+ * Worth reporting on its own: it means captions are off and the user is
+ * looking straight at the switch that turns them on.
+ */
+export function captionSettingsOpen(doc: Document): boolean {
+  return captionLabelled(doc).some(isCaptionSettings);
+}
+
+export function findCaptionRoot(doc: Document): { element: Element; strategy: string } | null {
+  // Measured in a real call: several elements carry "caption" in their label —
+  // the transcript region, the CC toggle, a jump-to-latest control, a settings
+  // entry and the settings dialog itself. Controls and settings surfaces are
+  // excluded, and the one marked as a region wins, rather than trusting
+  // document order to put the right one first.
+  const labelled = captionLabelled(doc).filter((element) => !isCaptionSettings(element));
 
   const region = labelled.find((element) => element.getAttribute('role') === 'region');
   const byLabel = region ?? labelled[0];
@@ -339,9 +392,15 @@ export function diagnose(doc: Document): DomReport {
 
   const empty = captionRoot ? captionRootIsEmpty(captionRoot.element) : false;
 
+  const settingsOpen = captionSettingsOpen(doc);
+
   const problems: string[] = [];
   if (!captionRoot) {
-    problems.push('no caption container found — are captions switched on?');
+    problems.push(
+      settingsOpen
+        ? 'the Captions and translation panel is open — switch captions on in it'
+        : 'no caption container found — are captions switched on?',
+    );
   }
   if (!roster) {
     problems.push('no participant roster found — speaker names will be unavailable');
@@ -360,6 +419,7 @@ export function diagnose(doc: Document): DomReport {
     captionsRead: captions.length,
     activeSpeaker: findActiveSpeaker(doc, names),
     waitingForSpeech: captionRoot !== null && empty,
+    settingsOpen,
     problems,
   };
 }

@@ -69,8 +69,17 @@ const KEPT_ATTRS = [
   'jsname',
 ];
 
-/** Words that make a label a description of the UI rather than of a person. */
-const STRUCTURAL = /caption|subtitle|participant|people|attendee|speaking|mute|present|chat|list|camera|microphone|transcript/i;
+/**
+ * Words that make a label a description of the UI rather than of a person.
+ *
+ * The settings vocabulary was added after a capture came back with the one
+ * label that mattered reduced to «redacted:32» — the control that turns
+ * captions on, inside Meet's own settings dialog. A capture that hides the
+ * answer to the question it was taken to answer is worth little, and none of
+ * these words appears in anybody's name.
+ */
+const STRUCTURAL =
+  /caption|subtitle|participant|people|attendee|speaking|mute|present|chat|list|camera|microphone|transcript|translat|language|setting|option|tooltip|dialog|turn on|turn off|jump/i;
 
 /** Values short and enumerated enough to carry meaning rather than identity. */
 const FLAG_VALUE = /^(true|false|on|off|\d{1,4})$/i;

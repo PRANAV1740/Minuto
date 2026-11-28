@@ -271,3 +271,29 @@ than a DOM one.
 
 Still unconfirmed, and now the only thing left to confirm: a call with two
 people actually speaking.
+
+## Round six: succeeding into the wrong element, again
+
+Captions off, settings panel open, and the capture reported a caption
+container found by `aria-label`. What it had found:
+
+    div[role="dialog"][aria-label="Captions and translation"]
+
+Meet's settings dialog. The only caption-labelled container on the page, so
+`findCaptionRoot` took it, reported a strategy that "worked", and would have
+read buttons and tooltips for the entire meeting. This is the second instance
+of the failure the header of meet-dom.ts warns about — the first was the
+Material screen-reader announcer — and it is worse than finding nothing,
+because nothing is honest.
+
+`findCaptionRoot` now rejects a container whose role is a dialog, menu,
+tooltip, listbox or tab, and one whose label is about translation, language,
+settings or options. `captionSettingsOpen` reports the dialog for what it is,
+so the panel can say "switch captions on in it" rather than "no caption
+container found".
+
+The capture also came back with the one label that mattered reduced to
+`«redacted:32»` — the control inside that dialog which turns captions on. The
+redaction allowlist now covers settings vocabulary. A capture that hides the
+answer to the question it was taken to answer is worth little, and none of
+those words appears in anybody's name.

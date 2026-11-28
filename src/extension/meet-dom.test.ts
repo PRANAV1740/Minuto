@@ -419,3 +419,55 @@ test('a wrapper holding several entries does not collapse into one', () => {
     { speaker: 'Asha R', text: 'I will do the deck' },
   ]);
 });
+
+/**
+ * Transcribed from a real capture, captions off and the settings panel open.
+ *
+ * The only caption-labelled container on the whole page. Before this fixture
+ * existed, findCaptionRoot chose it, reported strategy "aria-label", and read
+ * tooltips for the rest of the meeting.
+ */
+const REAL_MEET_SETTINGS_DIALOG = `
+  <div role="dialog" aria-label="Captions and translation" jsname="TUXR0d">
+    <div aria-hidden="true"></div>
+    <div><div data-tt-id="x">
+      <div jsname="wOezY"><div data-tt-id="y"><span data-is-tooltip-wrapper="true"></span></div></div>
+      <div jsname="zRRQAf"><div><div></div></div></div>
+      <div><span data-is-tooltip-wrapper="true">
+        <button role="button" aria-label="Turn on captions for this call"></button>
+        <div role="tooltip" aria-hidden="true">Captions are off</div>
+      </span></div>
+    </div></div>
+    <div aria-hidden="true"></div>
+  </div>`;
+
+test('the captions settings dialog is never mistaken for the transcript', () => {
+  assert.equal(findCaptionRoot(dom(REAL_MEET_SETTINGS_DIALOG)), null);
+});
+
+test('having that dialog open is reported as what it is', () => {
+  const report = diagnose(dom(REAL_MEET_SETTINGS_DIALOG));
+  assert.equal(report.settingsOpen, true);
+  assert.equal(report.captionRootStrategy, null);
+  assert.ok(report.problems.some((problem) => /switch captions on in it/i.test(problem)));
+});
+
+test('the real transcript still wins when both are on the page', () => {
+  const found = findCaptionRoot(dom(REAL_MEET_SETTINGS_DIALOG + REAL_MEET_CAPTIONS));
+  assert.equal(found?.element.getAttribute('role'), 'region');
+  assert.equal(found?.element.getAttribute('aria-label'), 'Captions');
+});
+
+test('a menu entry for captions is not the transcript either', () => {
+  assert.equal(
+    findCaptionRoot(dom('<div role="menuitem" aria-label="Captions"><div>something</div></div>')),
+    null,
+  );
+});
+
+test('a caption surface about translation is a settings surface', () => {
+  assert.equal(
+    findCaptionRoot(dom('<div aria-label="Caption language and translation"><div>x</div></div>')),
+    null,
+  );
+});

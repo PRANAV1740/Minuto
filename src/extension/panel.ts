@@ -229,6 +229,9 @@ function renderEmpty(onMeet: boolean): void {
  * panel: one is the user's move, one is everyone else's, and one is ours.
  */
 function emptyCaptionsMessage(snapshot: SessionSnapshot): string {
+  if (snapshot.report?.settingsOpen) {
+    return 'Meet’s Captions and translation panel is open — switch captions on in it.';
+  }
   if (snapshot.captionsOn === false) {
     return 'Captions are off in Meet. Press c, or the CC button, to switch them on.';
   }
