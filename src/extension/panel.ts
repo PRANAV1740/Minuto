@@ -140,6 +140,7 @@ function renderCapture(state: CaptureState | null): void {
   }
 
   capturing = state.capturing;
+  latestCaptureState = state;
   captureButton.textContent = state.capturing ? 'Stop capture' : 'Start capture';
 
   rows(captureStatus, [
@@ -204,10 +205,25 @@ async function pollCapture(): Promise<void> {
 /** Held so the copy button always offers the most recent capture. */
 let latestCapture: unknown = null;
 
-copyButton.addEventListener('click', () => {
-  if (latestCapture === null) return;
+/**
+ * The last capture status seen, folded into the copied diagnostic.
+ *
+ * Several rounds of this were spent with the DOM half of the picture in a
+ * paste and the audio half in a screenshot, arriving separately. One button
+ * should produce everything needed to diagnose a call. These are machine
+ * details — tier, adapter, counts, error strings — and carry nothing anyone
+ * said.
+ */
+let latestCaptureState: CaptureState | null = null;
 
-  const json = JSON.stringify(latestCapture, null, 2);
+copyButton.addEventListener('click', () => {
+  if (latestCapture === null && latestCaptureState === null) return;
+
+  const json = JSON.stringify(
+    { meet: latestCapture, audio: latestCaptureState, startError },
+    null,
+    2,
+  );
   void navigator.clipboard
     .writeText(json)
     .then(() => {
@@ -252,7 +268,7 @@ const clock = (ms: number): string => {
  */
 function renderEmpty(onMeet: boolean): void {
   latestCapture = null;
-  copyButton.disabled = true;
+  copyButton.disabled = latestCaptureState === null;
 
   rows(session, [
     ['status', onMeet ? 'Meet tab found, not reporting' : 'no Meet tab active', 'warn'],
