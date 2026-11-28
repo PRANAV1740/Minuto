@@ -30,6 +30,7 @@ import {
   captionsAreOn,
   findCaptionsToggle,
   markCaptionRegion,
+  pressCaptionsShortcut,
   setCaptionsHidden,
 } from './captions-view.ts';
 import { DEFAULT_SETTINGS, loadSettings, onSettingsChange, type Settings } from './settings.ts';
@@ -62,6 +63,7 @@ let observedRoot: Element | null = null;
 
 let settings: Settings = { ...DEFAULT_SETTINGS };
 let enableAttempts = 0;
+let shortcutPressed = false;
 let sawCaptionsOn = false;
 
 function snapshot(): SessionSnapshot {
@@ -138,11 +140,24 @@ function manageCaptions(): void {
     return;
   }
 
-  // null means the call UI has not rendered the control yet, or carries a
-  // label we do not recognise. Either way there is nothing safe to click.
-  if (on === null) return;
-
   if (!settings.autoCaptions || sawCaptionsOn) return;
+
+  // No control to read. Measured in a real call: with the side panel open the
+  // Meet window is too narrow to render a captions button, and the overflow
+  // menu it moves into is not in the DOM until opened — so there is nothing
+  // to find and nothing to click. Meet's own keyboard shortcut does not care
+  // what the toolbar has done with itself.
+  if (on === null) {
+    // Exactly once. Without a readable state there is no way to tell a press
+    // that worked from one that did nothing, and a second press would switch
+    // captions back off.
+    if (shortcutPressed) return;
+
+    shortcutPressed = pressCaptionsShortcut(document);
+    if (shortcutPressed) console.info('[Minuto] pressed c to switch captions on');
+    return;
+  }
+
   if (enableAttempts >= MAX_ENABLE_ATTEMPTS) return;
 
   enableAttempts++;

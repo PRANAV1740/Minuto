@@ -5,7 +5,9 @@ import { JSDOM } from 'jsdom';
 import {
   captionsAreOn,
   captionControlLabels,
+  canSendShortcut,
   markCaptionRegion,
+  pressCaptionsShortcut,
   setCaptionsHidden,
   CAPTION_MARK,
   HIDE_STYLE_ID,
@@ -216,4 +218,73 @@ test('the hidden region cannot swallow clicks', () => {
 
 test('the rules are forced, since Meet styles the region itself', () => {
   assert.ok(HIDE_CAPTIONS_CSS.split('!important').length > 4, 'expected !important on each rule');
+});
+
+// ---------- the keyboard shortcut ----------
+
+const keysSeen = (doc: Document): string[] => {
+  const seen: string[] = [];
+  doc.addEventListener('keydown', (event) => seen.push((event as KeyboardEvent).key));
+  return seen;
+};
+
+test('pressing c reaches the page as a real-looking keydown', () => {
+  // Measured in a real call: with the side panel open the Meet window is too
+  // narrow to render a captions button at all, and the menu it moves into is
+  // not in the DOM until opened. The keyboard shortcut works regardless.
+  const doc = dom('<div></div>');
+  const seen = keysSeen(doc);
+
+  assert.equal(pressCaptionsShortcut(doc), true);
+  assert.deepEqual(seen, ['c']);
+});
+
+test('the shortcut is not sent while a text field has focus', () => {
+  // Otherwise the letter lands in Meet's chat box and gets sent to everyone.
+  const doc = dom('<input id="chat" />');
+  const input = doc.getElementById('chat') as HTMLInputElement;
+  input.focus();
+
+  const seen = keysSeen(doc);
+
+  assert.equal(canSendShortcut(doc), false);
+  assert.equal(pressCaptionsShortcut(doc), false);
+  assert.deepEqual(seen, []);
+});
+
+test('a textarea and a contenteditable count as text fields too', () => {
+  const withTextarea = dom('<textarea id="t"></textarea>');
+  (withTextarea.getElementById('t') as HTMLTextAreaElement).focus();
+  assert.equal(canSendShortcut(withTextarea), false);
+
+  // tabindex so the element is focusable at all; Meet's own composer is a
+  // focusable contenteditable in just this way.
+  const withEditable = dom('<div id="e" contenteditable="true" tabindex="0"></div>');
+  (withEditable.getElementById('e') as HTMLElement).focus();
+  assert.equal(canSendShortcut(withEditable), false);
+
+  const insideEditable = dom(
+    '<div contenteditable="true"><span id="s" tabindex="0">draft</span></div>',
+  );
+  (insideEditable.getElementById('s') as HTMLElement).focus();
+  assert.equal(canSendShortcut(insideEditable), false);
+});
+
+test('an ordinary focused element does not block the shortcut', () => {
+  const doc = dom('<button id="b"></button>');
+  (doc.getElementById('b') as HTMLButtonElement).focus();
+  assert.equal(canSendShortcut(doc), true);
+});
+
+test('the event carries the legacy keyCode too', () => {
+  // Meet is old enough in places to read event.keyCode, which a KeyboardEvent
+  // constructed from an init dictionary does not set by itself.
+  const doc = dom('<div></div>');
+  let code: number | undefined;
+  doc.addEventListener('keydown', (event) => {
+    code = (event as KeyboardEvent).keyCode;
+  });
+
+  pressCaptionsShortcut(doc);
+  assert.equal(code, 67);
 });

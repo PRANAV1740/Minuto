@@ -344,3 +344,22 @@ positive. The offscreen document now also reads
 `WEBGL_debug_renderer_info`, which is not masked the same way and yields
 `ANGLE (NVIDIA, NVIDIA GeForce RTX 3050 Laptop GPU Direct3D11 …)` — a better
 signal for the tier, and a line the user can compare against chrome://gpu.
+
+## Round nine: nothing to click
+
+`Cannot find Meet's captions control`. Correct, and not a detection bug: with
+the side panel open the Meet window is narrow enough that the toolbar is down
+to a gear and a hang-up button. The captions control has moved into an
+overflow menu, and a menu that has never been opened is not in the DOM — so
+there is nothing to find and nothing to click, however good the selector.
+
+Minuto now presses Meet's own `c` shortcut, which does not care what the
+toolbar has done with itself. Guarded two ways: never while focus is in a
+text field, because a stray `c` in Meet's chat box gets sent to everyone
+rather than toggling anything; and exactly once per tab, because without a
+readable state there is no way to tell a press that worked from one that did
+nothing, and a second press would switch captions back off.
+
+The event is synthetic, so `isTrusted` is false and a handler that checks it
+will ignore it. The panel therefore still tells the user they can press the
+key themselves, and now also says why the control is missing.

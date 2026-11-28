@@ -181,3 +181,70 @@ export function setCaptionsHidden(doc: Document, hidden: boolean): void {
   style.textContent = HIDE_CAPTIONS_CSS;
   (doc.head ?? doc.documentElement).append(style);
 }
+
+// ------------------------------------------------- the keyboard shortcut
+
+/**
+ * Meet's own shortcut for captions.
+ *
+ * Measured in a real call: with the side panel open, the Meet window is too
+ * narrow to render a captions button at all. The control moves into an
+ * overflow menu, and a menu that has never been opened is not in the DOM, so
+ * there is nothing for `findCaptionsToggle` to find and nothing to click. The
+ * shortcut works whatever the toolbar has done with itself.
+ */
+const SHORTCUT_KEY = 'c';
+const SHORTCUT_KEYCODE = 67;
+
+/**
+ * Whether sending a bare letter to the page is safe right now.
+ *
+ * It is not, if the user is typing: Meet's chat box is a text field, and a
+ * stray `c` there does not toggle captions, it gets sent to everyone in the
+ * meeting.
+ */
+export function canSendShortcut(doc: Document): boolean {
+  const active = doc.activeElement as HTMLElement | null;
+  if (!active) return true;
+
+  const tag = active.tagName.toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || tag === 'select') return false;
+
+  if (active.isContentEditable === true) return false;
+
+  // The attribute as well as the property: `isContentEditable` is computed by
+  // the browser and not implemented everywhere, and focus often sits on a
+  // child of the editable element rather than on it.
+  return active.closest('[contenteditable]:not([contenteditable="false"])') === null;
+}
+
+/**
+ * Presses `c` on the page. Returns whether it was sent.
+ *
+ * A synthetic event, so `isTrusted` is false and a handler that checks it
+ * will ignore this — which is why the panel still tells the user they can
+ * press the key themselves. `keyCode` is set by hand because a KeyboardEvent
+ * built from an init dictionary does not carry the legacy property, and Meet
+ * is old enough in places to read it.
+ */
+export function pressCaptionsShortcut(doc: Document): boolean {
+  if (!canSendShortcut(doc)) return false;
+
+  const target: EventTarget = doc.activeElement ?? doc.body ?? doc.documentElement;
+
+  for (const type of ['keydown', 'keyup'] as const) {
+    const event = new (doc.defaultView?.KeyboardEvent ?? KeyboardEvent)(type, {
+      key: SHORTCUT_KEY,
+      code: 'KeyC',
+      bubbles: true,
+      cancelable: true,
+    });
+
+    Object.defineProperty(event, 'keyCode', { get: () => SHORTCUT_KEYCODE });
+    Object.defineProperty(event, 'which', { get: () => SHORTCUT_KEYCODE });
+
+    target.dispatchEvent(event);
+  }
+
+  return true;
+}

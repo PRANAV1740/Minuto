@@ -264,7 +264,10 @@ function emptyCaptionsMessage(snapshot: SessionSnapshot): string {
     return 'Captions are on and empty — nothing has been said yet.';
   }
   if (snapshot.captionsOn === null) {
-    return 'Cannot find Meet’s captions control. Press c to switch captions on.';
+    return (
+      'Cannot find Meet’s captions control — the window may be too narrow for it. ' +
+      'Minuto has pressed c once; if captions are still off, click the Meet video and press c.'
+    );
   }
   return 'Nothing read yet — captions appear a moment after somebody speaks.';
 }
