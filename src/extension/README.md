@@ -420,3 +420,25 @@ started", which is true and useless. Every step of the start path now returns
 a named failure, the panel holds and displays it, and `activeTab` was added
 because that is what `chrome.tabCapture.getMediaStreamId` complains about
 when it refuses.
+
+## Round twelve: the click the panel was eating
+
+    Chrome refused tab capture: Extension has not been invoked for the
+    current page (see activeTab permission).
+
+`activeTab` was in the manifest by then, and that is not what the message is
+about. Chrome **grants** activeTab when the user invokes the extension on a
+tab, and `sidePanel.setPanelBehavior({ openPanelOnActionClick: true })` means
+the panel consumes the toolbar click, so `action.onClicked` never fires and
+the grant never happens. A convenience setting was quietly removing the only
+event that made capture possible.
+
+The click is handled explicitly now: `action.onClicked` opens the side panel
+with `sidePanel.open({ tabId })`, which both grants activeTab for that tab
+and shows the panel. `open()` needs a user gesture, so nothing is awaited
+before it. The grant lasts until the tab navigates away, which a Meet call
+does not do, so one click at the start of a meeting is enough.
+
+The error message no longer repeats Chrome's wording, which points at a
+permission rather than at the click that is missing. It now says to click the
+toolbar icon with the Meet tab in front.

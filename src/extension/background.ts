@@ -88,6 +88,18 @@ async function captureControl(action: 'start' | 'stop' | 'status'): Promise<unkn
       streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tab.id });
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
+
+      // The common one, and it does not mean what it says. Chrome grants
+      // activeTab on invocation, not from the manifest, so the answer is a
+      // click on the toolbar icon rather than anything in settings.
+      if (/not been invoked/i.test(detail)) {
+        return {
+          error:
+            'Chrome has not granted Minuto access to this tab yet. Click the Minuto icon in ' +
+            'the toolbar while this Meet tab is in front, then press Start capture again.',
+        };
+      }
+
       return { error: `Chrome refused tab capture: ${detail}` };
     }
 
@@ -133,7 +145,31 @@ chrome.runtime.onMessage.addListener(
 
 chrome.tabs.onRemoved.addListener((tabId) => snapshots.delete(tabId));
 
-// Clicking the toolbar icon opens the panel rather than a popup.
-chrome.sidePanel
-  ?.setPanelBehavior({ openPanelOnActionClick: true })
-  .catch(() => {});
+/**
+ * Clicking the toolbar icon opens the panel — by hand, on purpose.
+ *
+ * `openPanelOnActionClick` did this for free, and that was the bug. Chrome
+ * grants `activeTab` when the user *invokes* the extension on a tab, and
+ * letting the panel consume the click means `action.onClicked` never fires,
+ * so the grant never happens. Tab capture then refuses with
+ *
+ *   Extension has not been invoked for the current page
+ *   (see activeTab permission)
+ *
+ * which reads like a missing manifest entry and is not one. Handling the
+ * click ourselves gets both: the grant for that tab, and the panel.
+ *
+ * The grant lasts until the tab navigates away, which a Meet call does not
+ * do, so one click at the start of a meeting is enough.
+ */
+chrome.sidePanel?.setPanelBehavior({ openPanelOnActionClick: false }).catch(() => {});
+
+chrome.action.onClicked.addListener((tab) => {
+  if (tab.id === undefined) return;
+
+  // Synchronous within the click: sidePanel.open() requires a user gesture
+  // and awaiting anything first would spend it.
+  void chrome.sidePanel.open({ tabId: tab.id }).catch((error: unknown) => {
+    console.error('[Minuto] could not open the side panel', error);
+  });
+});
