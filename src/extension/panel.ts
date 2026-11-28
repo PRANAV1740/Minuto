@@ -84,11 +84,33 @@ type CaptureState = {
 
 let capturing = false;
 
+/**
+ * The last thing that went wrong trying to start.
+ *
+ * Held in the panel rather than in the offscreen document's status, because
+ * the failure that actually happened was in the service worker, before any
+ * status existed to write it into — so it went nowhere and the panel said
+ * "not started", which is true and useless.
+ */
+let startError: string | null = null;
+
 captureButton.addEventListener('click', () => {
   captureButton.disabled = true;
+  startError = null;
+
   void chrome.runtime
     .sendMessage({ kind: 'capture-control', action: capturing ? 'stop' : 'start' })
-    .catch(() => {})
+    .then((reply: unknown) => {
+      const error = (reply as { error?: string } | undefined)?.error;
+      if (error) {
+        startError = error;
+        console.error('[Minuto] capture did not start:', error);
+      }
+    })
+    .catch((error: unknown) => {
+      startError = error instanceof Error ? error.message : String(error);
+      console.error('[Minuto] capture did not start:', startError);
+    })
     .finally(() => {
       captureButton.disabled = false;
       void pollCapture();
@@ -112,8 +134,8 @@ function describeAdapter(adapter: CaptureState['adapter']): string {
 function renderCapture(state: CaptureState | null): void {
   if (!state) {
     captureButton.textContent = 'Start capture';
-    rows(captureStatus, [['status', 'not started']]);
-    captureProblem.replaceChildren();
+    rows(captureStatus, [['status', 'not started', 'warn']]);
+    showNotes(startError ? [startError] : []);
     return;
   }
 
@@ -129,6 +151,7 @@ function renderCapture(state: CaptureState | null): void {
     ['gpu', describeAdapter(state.adapter)],
     ['model', state.modelReady ? 'ready' : state.modelError ? 'failed' : 'loading…',
       state.modelReady ? 'ok' : state.modelError ? 'warn' : undefined],
+    ['capture', state.capturing ? 'running' : 'stopped', state.capturing ? 'ok' : undefined],
     ['microphone', state.micEnabled ? 'on' : 'off'],
     [
       'audio context',
@@ -140,10 +163,15 @@ function renderCapture(state: CaptureState | null): void {
     ['words', String(state.words)],
   ]);
 
-  const notes = [state.tier?.warning, state.modelError, state.captureError].filter(
-    (note): note is string => Boolean(note),
+  showNotes(
+    [startError, state.tier?.warning, state.modelError, state.captureError].filter(
+      (note): note is string => Boolean(note),
+    ),
   );
+}
 
+/** Whatever is currently wrong with capture, or nothing. */
+function showNotes(notes: readonly string[]): void {
   if (notes.length === 0) {
     captureProblem.replaceChildren();
     return;

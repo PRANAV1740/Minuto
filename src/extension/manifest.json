@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Accurate minutes from Google Meet calls. Your audio never leaves your computer.",
   "minimum_chrome_version": "116",
-  "permissions": ["tabCapture", "offscreen", "sidePanel", "storage", "scripting", "tabs"],
+  "permissions": ["activeTab", "tabCapture", "offscreen", "sidePanel", "storage", "scripting", "tabs"],
   "host_permissions": ["https://meet.google.com/*"],
   "background": {
     "service_worker": "background.js",

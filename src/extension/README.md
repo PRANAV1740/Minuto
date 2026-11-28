@@ -395,3 +395,28 @@ microphone and the tab are separate streams, which is a free two-way speaker
 split — the mic is this user, the tab is everyone else. Running VAD on each
 produces the same `SpeakerSample[]` the fusion layer already consumes, with
 no captions and no diarisation vendor.
+
+## Round eleven: what a working capture told us, and what it hid
+
+Most of it worked. From one capture, with Chrome restarted:
+
+    tier A, gpu ANGLE (NVIDIA, NVIDIA GeForce RTX 3050 6GB Laptop GPU …)
+    model ready
+    captionRootStrategy aria-label, captionsRead 1, problems []
+    captionControls: Open caption settings, Jump to most recent captions,
+                     Turn off live captions, Captions and translation
+
+The GPU preference took effect once Chrome actually restarted; the board name
+now appears instead of a verdict. The caption reader read a real caption from
+a real call, with no problems reported, and `data-minuto-captions` was on the
+right element — the region, not the settings dialog, which was open at the
+same time and correctly ignored. "Turn off live captions" confirms the
+toggle wording the detection was written for, two rounds after it was guessed.
+
+What it hid: `audio context: not started`, and nothing anywhere saying why.
+Pressing Start capture could fail in the service worker — before any status
+object existed to write an error into — and the panel would show "not
+started", which is true and useless. Every step of the start path now returns
+a named failure, the panel holds and displays it, and `activeTab` was added
+because that is what `chrome.tabCapture.getMediaStreamId` complains about
+when it refuses.

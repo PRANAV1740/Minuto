@@ -51,7 +51,7 @@ check(
   JSON.stringify(manifest.host_permissions),
 );
 
-for (const needed of ['tabCapture', 'offscreen', 'sidePanel', 'storage', 'scripting']) {
+for (const needed of ['activeTab', 'tabCapture', 'offscreen', 'sidePanel', 'storage', 'scripting']) {
   check(`permission: ${needed}`, (manifest.permissions ?? []).includes(needed));
 }
 

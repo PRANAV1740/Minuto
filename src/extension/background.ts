@@ -69,11 +69,28 @@ async function captureControl(action: 'start' | 'stop' | 'status'): Promise<unkn
 
   if (action === 'start') {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tab?.id === undefined) return { error: 'no active tab' };
+
+    if (tab?.id === undefined) return { error: 'No active tab to capture.' };
+    if (!isMeetUrl(tab.url)) {
+      return { error: 'The tab in front is not a Meet call — switch to it and try again.' };
+    }
 
     // The stream id has to be minted here: tabCapture is not available to an
     // offscreen document, only the id it produces.
-    const streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tab.id });
+    //
+    // This is where capture silently did nothing: the call threw, the panel
+    // showed "not started", and no error reached anywhere a person would
+    // look. Chrome's usual complaint here is that the extension has not been
+    // invoked for the page, which is about the activeTab grant rather than
+    // about anything the user did wrong.
+    let streamId: string;
+    try {
+      streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tab.id });
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      return { error: `Chrome refused tab capture: ${detail}` };
+    }
+
     return chrome.runtime.sendMessage({ kind: 'capture-start', streamId });
   }
 
